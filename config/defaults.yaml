@@ -1,0 +1,56 @@
+# FCLGA GraphTransformer - Default Configuration
+# This file contains default hyperparameters for the model and training
+
+# Model Architecture
+model:
+  name: "FCLGA_GraphTransformer"
+  num_layers: 6
+  hidden_dim: 48
+  dropout_rate: 0.253
+  attention_freq: 3  # Apply global attention every N layers
+
+# Training Parameters
+training:
+  epochs: 500
+  batch_size: 4
+  learning_rate: 8.24e-4
+  weight_decay: 1.07e-5
+  train_size: 400
+  val_size: 0  # Set to 0 to use test_size for validation
+  test_size: 100
+  shuffle: true
+  save_best_model: true
+  
+# Optimizer Settings
+optimizer:
+  type: "adam"  # Options: adam, sgd, adamw
+  scheduler: "step"  # Options: step, cosine, plateau
+  decay_step: 46
+  decay_rate: 0.668
+  restart: 0
+
+# Preprocessing Settings
+preprocessing:
+  geometry:
+    n_samples: 500
+    min_length: 100
+    max_length: 200
+    min_hole_radius: 10
+    max_hole_radius: 20
+    radius_tolerance: 30
+    
+  simulation:
+    num_parallel_jobs: 4  # Number of parallel Abaqus simulations
+    
+  extraction:
+    output_variables: ['E11']  # Options: E11, E22, E33, S11, S22, etc.
+
+# Paths
+paths:
+  dataset_dir: "./datasets"
+  checkpoint_dir: "./results/checkpoints"
+  results_dir: "./results"
+  plots_dir: "./results/plots"
+  
+# Device
+device: "cuda"  # Options: cuda, cpu, auto

@@ -1,0 +1,78 @@
+# Conda Environment for FCLGA GraphTransformer
+# 
+# Installation:
+#   conda env create -f environment.yml
+#   conda activate fclga
+#
+# Update existing environment:
+#   conda env update -f environment.yml --prune
+
+name: fclga
+channels:
+  - pytorch
+  - conda-forge
+  - pyg  # PyTorch Geometric channel
+  - defaults
+
+dependencies:
+  # Python version
+  - python>=3.10,<3.12
+
+  # Core Deep Learning (flexible versions for better compatibility)
+  - pytorch>=2.0
+  - pytorch-cuda>=11.7  # Works with CUDA 11.7+ including 12.x
+
+  # PyTorch Geometric (install via pip for better compatibility)
+  # Note: conda pyg channel can be problematic, pip is more reliable
+  
+  # Scientific Computing
+  - numpy=1.24.0
+  - scipy=1.10.0
+  
+  # Data Processing
+  - pandas=2.0.0
+  
+  # Visualization
+  - matplotlib=3.7.0
+  - seaborn=0.12.0
+  
+  # Configuration
+  - pyyaml=6.0
+  
+  # Progress bars
+  - tqdm=4.65.0
+
+  # Testing
+  - pytest=7.0.0
+  - pytest-cov=4.0.0
+
+  # Code Quality Tools
+  - black=23.0.0
+  - isort=5.12.0
+  - flake8=6.0.0
+  - pylint=2.16.0
+  - mypy=1.0.0
+
+  # Utilities
+  - python-dateutil>=2.8.0
+
+  # Additional packages via pip (if not available in conda)
+  - pip
+  - pip:
+    - torch-geometric
+    - torch-scatter
+    - torch-sparse
+    - torch-cluster
+    - optuna>=3.0.0  # Hyperparameter optimization
+
+# Platform-specific notes:
+# 
+# This configuration works with CUDA 11.7+ including 12.x
+# The pytorch-cuda package is flexible and compatible with your driver
+#
+# For CPU-only (no CUDA):
+#   Remove pytorch-cuda line, conda will install CPU version automatically
+#
+# Check your CUDA version:
+#   nvidia-smi  # Shows CUDA version
+#   conda search pytorch -c pytorch  # Shows available versions
