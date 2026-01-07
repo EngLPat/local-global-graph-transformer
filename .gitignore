@@ -47,6 +47,46 @@ env/
 *.ckpt
 
 # Data and Results (large files)
+# Organized data directories
+data/raw/geometry/*.inp
+data/raw/simulations/**/*.odb
+data/raw/simulations/**/*.dat
+data/raw/simulations/**/*.msg
+data/raw/simulations/**/*.sta
+data/raw/simulations/**/*.log
+data/raw/simulations/**/*.com
+data/raw/simulations/**/*.prt
+data/raw/simulations/**/*.sim
+data/interim/strains/*.txt
+data/processed/*.pt
+data/processed/*.pkl
+
+# Temporary files
+temp/
+*.rpy
+*.rpy.*
+*.rec
+*.stt
+*.res
+*.pac
+*.mdl
+*.abq
+*.lck
+abaqus.rpy*
+abaqus*.rec
+
+# Result images (optional - comment out if you want to track them)
+results/images/*.png
+results/models/*.pt
+results/plots/*.png
+
+# Legacy data files in root (keep these ignored)
+INPs/
+ODBs/
+ODBsONLY/
+strains/
+*.pt
+*.pkl
 datasets/processed_data.pt
 datasets/*.pt
 results/*/

@@ -22,18 +22,28 @@ This repository implements the FCLGA GraphTransformer for solving mesh-based str
 ## Project Structure
 
 ```
-FCLGA_GraphTransformer/
- src/
-    preprocessing/       # Data generation and preprocessing
-    models/              # Model architectures
-    training/            # Training logic
-    evaluation/          # Testing and metrics
-    utils/               # Utility functions
- scripts/                 # Executable scripts
- config/                  # Configuration files
- tests/                   # Unit tests
- legacy/                  # Original working code (backup)
+HybridAttentionGNN/
+├── src/
+│   ├── preprocessing/       # Data generation and preprocessing
+│   ├── models/              # Model architectures (FCLGA_GraphTransformer)
+│   ├── training/            # Training loop and optimization
+│   ├── evaluation/          # Testing and metrics
+│   └── utils/               # Shared utility functions
+├── config/                  # Configuration management
+│   ├── defaults.yaml        # Default hyperparameters (EDIT THIS)
+│   ├── paths.py             # Directory structure
+│   └── constants.py         # Physical/numerical constants
+├── scripts/                 # Executable entry points
+├── datasets/                # Processed graph datasets
+├── results/                 # Training outputs and checkpoints
+├── legacy/                  # Original implementation (backup)
+└── tests/                   # Unit tests
 ```
+
+## Configuration
+
+**Edit `config/defaults.yaml` to change default hyperparameters.**  
+All parameters can be overridden via CLI arguments (see `--help`).
 
 ## Requirements
 
@@ -47,41 +57,133 @@ For detailed Abaqus configuration and material properties, see [`docs/ABAQUS_SET
 
 ## Installation
 
-### Option 1: Using Conda (Recommended)
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/FCLGA_GraphTransformer.git
 cd FCLGA_GraphTransformer
-
-# Create and activate conda environment
-conda env create -f environment.yml
-conda activate fclga
 ```
 
-### Option 2: Using pip + virtualenv
+### Step 2: Set Up Python Environment
+
+**Option A: Using Conda (Recommended)**
 
 ```bash
-git clone https://github.com/yourusername/FCLGA_GraphTransformer.git
-cd FCLGA_GraphTransformer
+# Create the environment from the provided environment.yml file
+conda env create -f environment.yml
 
+# Activate the environment
+conda activate fclga
+
+# Verify installation
+python -c "import torch; import torch_geometric; print('✓ Environment ready!')"
+```
+
+**Option B: Using pip + virtualenv**
+
+```bash
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-pip install -r requirements.txt
+# Activate it
+source venv/bin/activate  # On Linux/Mac
+# OR
+venv\Scripts\activate     # On Windows
+
+# Install PyTorch and PyTorch Geometric (check pytorch.org for your system)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch_geometric
+
+# Install other dependencies
+pip install numpy scipy pandas matplotlib seaborn pyyaml tqdm pytest
+```
+
+### Step 3: Verify Abaqus Installation (Optional for Data Generation)
+
+```bash
+# Check if Abaqus is available
+abaqus information=system
+
+# If not found, you'll need to add Abaqus to your PATH or use existing preprocessed data
+```
+
+**Note:** Abaqus is only required for data generation (preprocessing). If you have preprocessed data, you can skip this.
+
+### Step 4: Test the Installation
+
+```bash
+# Make sure you're in the conda environment (you should see (fclga) in your prompt)
+conda activate fclga
+
+# Run environment test
+python test_environment.py
+
+# Or quick test
+python -c "import torch; import torch_geometric; import numpy; print('All packages available!')"
 ```
 
 ## Quick Start
 
-```bash
-# Full pipeline
-python scripts/fclga_run_pipeline.py --stage all --num_cpus 4
+### For First-Time Users (After Pulling from GitHub)
 
-# Train only
+```bash
+# 1. Activate the environment (IMPORTANT - do this every time!)
+conda activate fclga
+
+# 2. Generate data and run preprocessing (requires Abaqus)
+python scripts/fclga_run_pipeline.py --stage preprocess --num_cpus 4
+
+# 3. Validate the processed data
+python scripts/validate_processed_data.py
+
+# 4. Check the generated plots
+ls results/plots/validation/
+
+# 5. Train the model (coming soon)
 python scripts/fclga_train.py --epochs 500 --batch_size 4
 
-# Test only
+# 6. Test the model (coming soon)
 python scripts/fclga_test.py --model_path results/best_model.pt
 ```
+
+### Quick Commands Reference
+
+```bash
+# Always start by activating the environment
+conda activate fclga
+
+# Run full preprocessing pipeline
+python scripts/fclga_run_pipeline.py --stage preprocess
+
+# Validate preprocessed data
+python scripts/validate_processed_data.py --num-samples 5
+
+# Clean up temporary Abaqus files
+bash scripts/cleanup_temp_files.sh
+
+# Deactivate environment when done
+conda deactivate
+```
+
+### Troubleshooting
+
+**Problem:** `ModuleNotFoundError: No module named 'numpy'` (or torch, etc.)
+
+**Solution:** You forgot to activate the conda environment!
+```bash
+conda activate fclga
+```
+
+**Problem:** Temporary Abaqus files (*.stt, *.res, etc.) cluttering the directory
+
+**Solution:** Run the cleanup script
+```bash
+bash scripts/cleanup_temp_files.sh
+```
+
+**Problem:** `abaqus: command not found`
+
+**Solution:** Either add Abaqus to PATH or use preprocessed data. Abaqus is only needed for data generation.
 
 ## Pipeline Stages
 

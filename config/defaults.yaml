@@ -1,49 +1,85 @@
-# FCLGA GraphTransformer - Default Configuration
-# This file contains default hyperparameters for the model and training
+# =============================================================================
+# FCLGA GraphTransformer - Configuration File
+# =============================================================================
+# Edit this file to change default hyperparameters for training and testing.
+# All values can be overridden via command-line arguments.
+#
+# Usage:
+#   Training:  python -m src.training.fclga_train_model
+#   Testing:   python -m src.evaluation.fclga_test --model_path <path>
+#
+# To use custom config: --config path/to/custom_config.yaml
+# =============================================================================
 
-# Model Architecture
+# Model Architecture (optimized via Optuna)
 model:
   name: "FCLGA_GraphTransformer"
-  num_layers: 6
-  hidden_dim: 48
-  dropout_rate: 0.253
-  attention_freq: 3  # Apply global attention every N layers
+  num_layers: 6              # Number of message-passing layers
+  hidden_dim: 48             # Hidden dimension size
+  dropout_rate: 0.253        # Dropout probability
+  attention_freq: 3          # Apply global attention every N layers
 
 # Training Parameters
 training:
-  epochs: 500
-  batch_size: 4
-  learning_rate: 8.24e-4
-  weight_decay: 1.07e-5
-  train_size: 400
-  val_size: 0  # Set to 0 to use test_size for validation
-  test_size: 100
-  shuffle: true
-  save_best_model: true
+  epochs: 500                # Total training epochs
+  batch_size: 4              # Batch size for training
+  learning_rate: 8.24e-4     # Initial learning rate
+  weight_decay: 1.07e-5      # L2 regularization
+  train_size: 400            # Number of training samples
+  val_size: 0                # Validation size (0 = use test for validation)
+  test_size: 100             # Number of test samples
+  shuffle: true              # Shuffle dataset before splitting
+  save_best_model: true      # Save model with best validation loss
   
 # Optimizer Settings
 optimizer:
-  type: "adam"  # Options: adam, sgd, adamw
-  scheduler: "step"  # Options: step, cosine, plateau
-  decay_step: 46
-  decay_rate: 0.668
-  restart: 0
+  type: "adam"               # Options: adam, sgd, adamw
+  scheduler: "step"          # Options: step, cosine, plateau, none
+  decay_step: 46             # Steps before LR decay
+  decay_rate: 0.668          # LR decay factor
+  restart: 0                 # Scheduler restarts
 
 # Preprocessing Settings
+# Preprocessing Settings
+# 
+# NOTE: Geometry generation (fclga_generate_geometry.py) runs in Abaqus's
+# Python interpreter and cannot load this YAML file. To change geometry or
+# material parameters, edit the values directly in that script (clearly
+# marked at the top). All other preprocessing scripts load from this file.
 preprocessing:
   geometry:
     n_samples: 500
-    min_length: 100
-    max_length: 200
-    min_hole_radius: 10
-    max_hole_radius: 20
-    radius_tolerance: 30
+    min_length: 100            # Plate minimum length (mm)
+    max_length: 200            # Plate maximum length (mm)
+    min_hole_radius: 10        # Minimum hole radius (mm)
+    max_hole_radius: 20        # Maximum hole radius (mm)
+    radius_tolerance: 30       # Minimum distance from hole to edges (mm)
+    expected_elements: 1000    # Target mesh element count
+    n_hole_configs: 25         # Number of different hole positions
+    n_displacements: 20        # Number of different load cases
+    
+  material:
+    # Composite laminate layup angles (degrees)
+    laminate_layup: [45.0, -45.0, -45.0, 45.0]
+    ply_thickness: 0.25        # Single ply thickness (mm)
+    density: 1.594e-09         # Material density (tonne/mm^3)
+    # Mechanical constants for user-defined material (UMAT)
+    # Format: [E1, E2, nu12, G12, E1c, E2c, nu12c, alpha_d, ...]
+    mechanical_constants: [
+      27500.0, 27500.0, 0.11, 2900.0, 27500.0, 27500.0,
+      0.11, 0.0, 604.0, 291.0, 604.0, 291.0, 75.0, 0.0, 0.0, 0.0,
+      20.438, 4.6257, 20.438, 4.6257, 0.3221, 1.0, 0.0, 0.0, 75.0,
+      0.0008, 0.552, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 
+      1000000000.0, 1000000000.0, -1000000000.0, 0.0, 0.0, 0.0
+    ]
     
   simulation:
-    num_parallel_jobs: 4  # Number of parallel Abaqus simulations
+    num_parallel_jobs: 4       # Number of parallel Abaqus simulations
     
   extraction:
-    output_variables: ['E11']  # Options: E11, E22, E33, S11, S22, etc.
+    output_variables: ['E11']  # Field outputs to extract from ODB
+    # Options: E11, E22, E33, S11, S22, S33, etc.
+    # Note: Extraction assumes global coordinate system transformation
 
 # Paths
 paths:

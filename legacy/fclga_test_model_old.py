@@ -30,7 +30,7 @@ import torch
 import random
 import torch_scatter
 import torch.nn as nn
-from torch.nn import Linear, Sequential, LayerNorm, ReLU, Dropout
+from torch.nn import Linear, Sequential, LayerNorm, Dropout
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.loader import DataLoader
 import matplotlib.pyplot as plt
@@ -44,26 +44,31 @@ import torch.optim as optim
 from tqdm import trange
 import pandas as pd
 import copy
-import matplotlib.pyplot as plt
 import os
-import h5py
 # import tensorflow.compat.v1 as tf
-import functools
-import json
-from torch_geometric.data import Data
-import enum
 import math
 
-# Define directories for datasets, checkpoints, and postprocessing
-root_dir = os.getcwd()
-dataset_dir = os.path.join(root_dir, 'datasets')
-checkpoint_dir = os.path.join(root_dir, 'best_models')
-postprocess_dir = os.path.join(root_dir, 'animations')
+# Import model and utilities from refactored modules
+from src.models.fclga_graph_transformer import FCLGA_GraphTransformer
+from src.models.processor_layer import ProcessorLayer
+from src.models.attention import GlobalAttention
+from src.utils.data_utils import normalize, unnormalize, get_stats, analyze_node_features
+from src.utils.optimizer_utils import build_optimizer
+from src.utils.visualization import plot_results, plot_regression, load_loss_data
+
+# Import configuration
+from config import paths as config_paths
+
+# Define directories for datasets, checkpoints, and postprocessing (using config)
+root_dir = config_paths.PROJECT_ROOT
+dataset_dir = str(config_paths.DATASETS_DIR)
+checkpoint_dir = str(config_paths.BEST_MODELS_DIR)
+postprocess_dir = str(config_paths.ANIMATIONS_DIR)
 
 print("dataset_dir {}".format(dataset_dir))
 
 
-gnn_data_path = os.path.join(dataset_dir, 'processed_data.pt')
+gnn_data_path = str(config_paths.DATASETS_DIR / 'processed_data.pt')
 data = torch.load(gnn_data_path,weights_only=False)
 
 #Define the list that will return the data graphs
@@ -91,7 +96,7 @@ def visualize(loader_original, model, file_dir, plot_name, stats_list, sample_in
         
         plot_results(single_sample, pred, file_dir, plot_name)
 
-def plot_results(data, prediction, path, name, remote_stress=0.025):
+def plot_results_OLD(data, prediction, path, name, remote_stress=0.025):
     print('Generating strain fields...')
     
     # Ensure data is on CPU for matplotlib processing
@@ -102,8 +107,6 @@ def plot_results(data, prediction, path, name, remote_stress=0.025):
     gs_strain = data.y[:, 0].cpu().numpy()
     pred_strain = prediction[:, 0].cpu().numpy()
     nominal_error = np.abs(pred_strain - gs_strain)  # Absolute nominal error
-    epsilon = 1e-10
-    # relative_error_strain = ((pred_strain - gs_strain) / remote_stress) * 100  # Relative error calculation
     relative_error_strain = np.abs((pred_strain - gs_strain) / remote_stress) * 100  # Relative error calculation
 
     # Print diagnostic information
@@ -130,7 +133,6 @@ def plot_results(data, prediction, path, name, remote_stress=0.025):
     
     min_strain = min(gs_element_values.min(), pred_element_values.min())
     max_strain = max(gs_element_values.max(), pred_element_values.max())
-    max_error = nominal_error.max()
     
     print(f"Element-wise ground truth range: {gs_element_values.min():.6f} to {gs_element_values.max():.6f}")
     print(f"Element-wise prediction range: {pred_element_values.min():.6f} to {pred_element_values.max():.6f}")
@@ -307,14 +309,7 @@ def plot_results(data, prediction, path, name, remote_stress=0.025):
     plot_regression(gs_strain, pred_strain, path, name, transparent=False, text_color='black')
 
 
-    # ADD THIS: Verify physical consistency
-    verify_physical_consistency(data, prediction, path, name, 
-                               E_laminate=23.1e9,  # GPa for [±45]s laminate
-                               thickness=1,     # 1.0 mm
-                               remote_stress=remote_stress)
-    
-    
-def plot_regression(actual_strain, predicted_strain, path, name, transparent=False, text_color='black'):
+def plot_regression_OLD(actual_strain, predicted_strain, path, name, transparent=False, text_color='black'):
     """Create a high-quality regression plot with customizable text color, filtering out padded nodes"""
     # Set up high-quality fonts with LaTeX
     plt.rcParams.update({
@@ -402,9 +397,6 @@ def plot_regression(actual_strain, predicted_strain, path, name, transparent=Fal
     ax_reg.legend(loc="upper left")
     ax_reg.grid(False)  # Disable grid, use background color to show low-count points
     
-    # Updated title to include metrics
-    title_text = f"Regression"
-    # ax_reg.set_title(title_text, fontsize=11, color=text_color)  # Remove title
     ax_reg.set_xlabel(r"Actual Strain $\varepsilon_{xx}$", color=text_color)
     ax_reg.set_ylabel(r"Predicted Strain $\varepsilon_{xx}^{\tiny\mathrm{FEA}}$", color=text_color)
     
@@ -431,8 +423,8 @@ def plot_regression(actual_strain, predicted_strain, path, name, transparent=Fal
     # Save metrics to a text file
     metrics_path = os.path.join(path, name + '_metrics.txt')
     with open(metrics_path, 'w') as f:
-        f.write(f"Regression Metrics (Filtered Data)\n")
-        f.write(f"===================================\n")
+        f.write("Regression Metrics (Filtered Data)\n")
+        f.write("===================================\n")
         f.write(f"Total data points: {len(actual_strain)}\n")
         f.write(f"Filtered data points: {len(filtered_actual)}\n")
         f.write(f"Threshold used: {threshold}\n")
@@ -452,7 +444,7 @@ def plot_regression(actual_strain, predicted_strain, path, name, transparent=Fal
     return r_squared, rmse, len(filtered_actual)
 
 
-def load_loss_data(file_path):
+def load_loss_data_OLD(file_path):
     """Load loss data from a text file with format: epoch loss_value"""
     epochs = []
     losses = []
@@ -476,7 +468,7 @@ def load_loss_data(file_path):
         print(f"Error loading {file_path}: {e}")
         return [], []
 
-def plot_epochs(train_loss_path, val_loss_path, output_dir, name="training_validation_loss", transparent=False, text_color='black'):
+def plot_epochs_OLD(train_loss_path, val_loss_path, output_dir, name="training_validation_loss", transparent=False, text_color='black'):
     """
     Create a high-quality plot of training and validation losses from files containing epoch-loss pairs.
     
@@ -497,7 +489,6 @@ def plot_epochs(train_loss_path, val_loss_path, output_dir, name="training_valid
     """
     import os
     import matplotlib.pyplot as plt
-    import numpy as np
     
     # Load the loss data
     training_epochs, training_losses = load_loss_data(train_loss_path)
@@ -583,7 +574,7 @@ def plot_epochs(train_loss_path, val_loss_path, output_dir, name="training_valid
     
     return training_epochs, training_losses, validation_epochs, validation_losses
 
-file_path = os.path.join(dataset_dir, 'processed_data.pt')
+file_path = str(config_paths.DATASETS_DIR / 'processed_data.pt')
 dataset_full_timesteps = torch.load(gnn_data_path, weights_only=False)
 dataset = torch.load(file_path, weights_only=False)
 if not isinstance(dataset, list):
@@ -592,7 +583,11 @@ dataset = dataset[:1]
 
 print(dataset)
 len(dataset_full_timesteps)/5
-def normalize(to_normalize, mean_vec, std_vec):
+
+# normalize, unnormalize, get_stats, build_optimizer, analyze_node_features
+# are now imported from utils package
+
+def normalize_OLD(to_normalize, mean_vec, std_vec):
     # print(f"Shape of to_normalize before normalization: {to_normalize.shape}")
     # print(f"Shape of mean_vec: {mean_vec.shape}")
     # print(f"Shape of std_vec: {std_vec.shape}")
@@ -600,10 +595,10 @@ def normalize(to_normalize, mean_vec, std_vec):
     # print(f"Shape of normalized: {normalized.shape}")
     return normalized
 
-def unnormalize(to_unnormalize,mean_vec,std_vec):
+def unnormalize_OLD(to_unnormalize,mean_vec,std_vec):
     return to_unnormalize*std_vec+mean_vec
 
-def get_stats(data_list):
+def get_stats_OLD(data_list):
     '''
     Method for normalizing processed datasets. Given  the processed data_list,
     calculates the mean and standard deviation for the node features, edge features,
@@ -666,7 +661,9 @@ def get_stats(data_list):
 
     return mean_std_list
 
-class GlobalAttention(torch.nn.Module):
+# Model classes are now imported from models package
+
+class GlobalAttention_OLD(torch.nn.Module):
     def __init__(self, hidden_dim):
         super().__init__()
         self.query = Linear(hidden_dim, hidden_dim)
@@ -688,9 +685,9 @@ class GlobalAttention(torch.nn.Module):
         attention_weights = torch.softmax(attention_logits, dim=-1)
         return torch.matmul(attention_weights, value)
 
-class MeshGraphNet(torch.nn.Module):
+class MeshGraphNet_OLD(torch.nn.Module):
     def __init__(self, input_dim_node, input_dim_edge, hidden_dim, output_dim, args, emb=False):
-        super(MeshGraphNet, self).__init__()
+        super(MeshGraphNet_OLD, self).__init__()
         """
         MeshGraphNet model. This model is built upon Deepmind's 2021 paper.
         This model consists of three parts: (1) Preprocessing: encoder (2) Processor
@@ -837,7 +834,7 @@ class MeshGraphNet(torch.nn.Module):
 
         return loss
     
-class ProcessorLayer(MessagePassing):
+class ProcessorLayer_OLD(MessagePassing):
     def __init__(self, in_channels, out_channels,  **kwargs):
         super(ProcessorLayer, self).__init__(  **kwargs )
         """
@@ -959,7 +956,7 @@ class ProcessorLayer(MessagePassing):
 
         return out, updated_edges
     
-def build_optimizer(args, params):
+def build_optimizer_OLD(args, params):
     weight_decay = args.weight_decay
     filter_fn = filter(lambda p : p.requires_grad, params)
     if args.opt == 'adam':
@@ -989,7 +986,7 @@ def build_optimizer(args, params):
 
     return scheduler, optimizer
 
-def analyze_node_features(dataset):
+def analyze_node_features_OLD(dataset):
     """Analyze the structure of node features in the dataset"""
     sample_data = dataset[0]
     
@@ -1094,7 +1091,7 @@ def test(loader, device, test_model, mean_vec_x, std_vec_x, mean_vec_edge, std_v
 
     # Per-sample statistics
     if len(sample_rmses) > 0:
-        print(f"\nRMSE Statistics:")
+        print("\nRMSE Statistics:")
         print(f"  Mean: {np.mean(sample_rmses):.6f}")
         print(f"  Median: {np.median(sample_rmses):.6f}")
         print(f"  Std: {np.std(sample_rmses):.6f}")
@@ -1129,7 +1126,7 @@ def train(train_dataset, val_dataset, device, stats_list, args):
     num_edge_features = train_dataset[0].edge_attr.shape[1]
     num_classes = 1
 
-    model = MeshGraphNet(num_node_features, num_edge_features, 
+    model = FCLGA_GraphTransformer(num_node_features, num_edge_features, 
                         args.hidden_dim, num_classes, args).to(device)
     scheduler, opt = build_optimizer(args, model.parameters())
 
@@ -1200,11 +1197,11 @@ def train(train_dataset, val_dataset, device, stats_list, args):
         df = pd.concat([df, new_row], ignore_index=True)
         
         if args.save_best_model and epoch % 5 == 0:
-            PATH = os.path.join(checkpoint_dir, model_name + '.pt')
+            PATH = str(config_paths.BEST_MODELS_DIR / f"{model_name}.pt")
             torch.save(best_model.state_dict(), PATH)
     
     # Save final dataframe
-    PATH = os.path.join(checkpoint_dir, model_name + '.csv')
+    PATH = str(config_paths.BEST_MODELS_DIR / f"{model_name}.csv")
     df.to_csv(PATH, index=False)
     
     # Plot results from final model
@@ -1229,7 +1226,7 @@ def save_plots(args, train_losses, val_losses, test_losses=None, velo_val_losses
         'svg.fonttype': 'none'  # Embed fonts as text for better compatibility
     })
 
-    f = plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 6))
     # plt.title('Losses Plot')  # Remove title
     plt.plot(train_losses, label="Training loss")
     plt.plot(val_losses, label="Validation loss")
@@ -1268,7 +1265,7 @@ def evaluate_final_model(test_dataset, best_model, device, stats_list, args):
     best_model.eval()
     
     print(f"\n{'='*70}")
-    print(f"EVALUATING TEST DATASET - INDIVIDUAL SAMPLE RMSEs")
+    print("EVALUATING TEST DATASET - INDIVIDUAL SAMPLE RMSEs")
     print(f"{'='*70}\n")
     
     total_loss = 0
@@ -1341,16 +1338,16 @@ def evaluate_final_model(test_dataset, best_model, device, stats_list, args):
     
     # Print summary
     print(f"\n{'='*70}")
-    print(f"TEST SET EVALUATION SUMMARY")
+    print("TEST SET EVALUATION SUMMARY")
     print(f"{'='*70}")
     print(f"Number of test samples: {num_samples}")
     print(f"Mean Test Loss: {mean_loss:.5f}")
-    print(f"\n--- RMSE METRICS ---")
+    print("\n--- RMSE METRICS ---")
     print(f"Global RMSE (all nodes, all samples): {global_rmse:.8f}")
     print(f"Mean of per-sample RMSEs: {mean_sample_rmse:.8f}")
     print(f"RMSE Std Dev: {rmse_std:.8f}")
     print(f"RMSE Range: [{rmse_min:.8f}, {rmse_max:.8f}]")
-    print(f"\n--- MASKING INFO ---")
+    print("\n--- MASKING INFO ---")
     print(f"Total nodes across all samples: {len(all_gts)}")
     print(f"Non-zero nodes (used): {non_zero_mask_global.sum()}")
     print(f"Masked nodes (padded/zero): {(~non_zero_mask_global).sum()}")
@@ -1458,418 +1455,6 @@ if sample_data.x.shape[1] > 3:  # Assuming at least a few features
     print("Sum of potential one-hot section:", row_sums)
 
 
-def verify_physical_consistency(data, prediction, path, name, E_laminate=23.1e9, thickness=1.0, remote_stress=0.025):
-    """
-    Verify physical consistency using Clapeyron's theorem for 2D composite plate.
-    Uses FEA stresses for boundary integrals and proper boundary normals.
-    
-    Parameters:
-    -----------
-    data : torch_geometric.data.Data
-        Graph data containing mesh, node features, and ground truth
-    prediction : torch.Tensor
-        Predicted strain values from the model
-    path : str
-        Directory to save results
-    name : str
-        Name prefix for output files
-    E_laminate : float
-        Effective laminate modulus in Pa (default: 12.4 GPa for [±45]s)
-    thickness : float
-        Plate thickness in mm (default: 1.0 mm)
-    remote_stress : float
-        Applied remote stress in Pa (if known, for reference only)
-    
-    Returns:
-    --------
-    dict : Dictionary containing all computed metrics
-    """
-    print('\n' + '='*70)
-    print('PHYSICAL CONSISTENCY VERIFICATION - CLAPEYRON\'S THEOREM')
-    print('='*70)
-    
-    # Move data to CPU for processing
-    pos = data.mesh_pos.cpu().numpy()  # Coordinates in mm
-    faces = data.cells.cpu().numpy()
-    
-    # Extract strains (dimensionless)
-    gs_strain = data.y[:, 0].cpu().numpy()  # FEA ground truth strains
-    pred_strain = prediction[:, 0].cpu().numpy()  # ML predicted strains
-    
-    # Extract node features
-    node_features = data.x.cpu().numpy()
-    is_hole_edge = node_features[:, 2]
-    is_fixed = node_features[:, 3]
-    is_displaced = node_features[:, 4]
-    displacement_amount = node_features[:, 5]  # Actual nodal displacement in mm
-    
-    # ========== GEOMETRY EXTRACTION (all in mm) ==========
-    print('\n--- Geometry Parameters ---')
-    
-    # Plate dimensions from mesh bounds (in mm)
-    x_coords = pos[:, 0]
-    y_coords = pos[:, 1]
-    
-    L = np.max(x_coords) - np.min(x_coords)  # Length in mm
-    W = np.max(y_coords) - np.min(y_coords)  # Width in mm
-    t = thickness  # Thickness in mm
-    
-    print(f"Plate Length (L): {L:.2f} mm")
-    print(f"Plate Width (W): {W:.2f} mm")
-    print(f"Plate Thickness (t): {t:.2f} mm")
-    print(f"Laminate Modulus (E): {E_laminate/1e9:.2f} GPa")
-    
-    # ========== CALCULATE FEA STRESSES (REFERENCE SOLUTION) ==========
-    # Use FEA strains to get FEA stresses (this is our reference)
-    sigma_xx_FEA = E_laminate * gs_strain  # Pa
-    
-    print('\n--- Loading Information ---')
-    print(f"Remote stress (reference): {remote_stress/1e6:.2f} MPa")
-    
-    # ========== HELPER FUNCTIONS ==========
-    
-    def calculate_triangle_area(v1, v2, v3):
-        """Calculate area of triangle given 3 vertices in mm²"""
-        return 0.5 * abs((v2[0] - v1[0]) * (v3[1] - v1[1]) - 
-                        (v3[0] - v1[0]) * (v2[1] - v1[1]))  # mm²
-    
-    def get_boundary_edges_ordered(node_coords, boundary_mask):
-        """
-        Get boundary edges (node pairs) in order along the boundary.
-        Returns list of (node_i, node_j, normal_x) tuples.
-        """
-        boundary_indices = np.where(boundary_mask > 0.5)[0]
-        if len(boundary_indices) < 2:
-            return []
-        
-        boundary_coords = node_coords[boundary_indices]
-        
-        # Determine if this is a vertical or horizontal boundary
-        x_var = np.var(boundary_coords[:, 0])
-        y_var = np.var(boundary_coords[:, 1])
-        
-        # Sort nodes along the boundary
-        if y_var > x_var:  # Vertical boundary
-            sort_idx = np.argsort(boundary_coords[:, 1])
-            # For vertical boundaries, determine if it's left (n_x=-1) or right (n_x=+1)
-            mean_x = np.mean(boundary_coords[:, 0])
-            if mean_x < np.mean(node_coords[:, 0]):  # Left boundary
-                normal_x = -1.0
-            else:  # Right boundary
-                normal_x = +1.0
-        else:  # Horizontal boundary
-            sort_idx = np.argsort(boundary_coords[:, 0])
-            normal_x = 0.0  # Horizontal boundaries don't contribute to x-direction force
-        
-        ordered_indices = boundary_indices[sort_idx]
-        
-        # Create edges (consecutive node pairs)
-        edges = []
-        for i in range(len(ordered_indices) - 1):
-            edges.append((ordered_indices[i], ordered_indices[i+1], normal_x))
-        
-        return edges
-    
-    def calculate_edge_length(node_coords, node_i, node_j):
-        """Calculate length of edge between two nodes in mm"""
-        return np.linalg.norm(node_coords[node_j] - node_coords[node_i])
-    
-    # ========== COMPUTE METRICS FOR BOTH PREDICTIONS AND GROUND TRUTH ==========
-    
-    results = {}
-    
-    for strain_field, field_name in [(pred_strain, 'Prediction'), (gs_strain, 'Ground Truth')]:
-        print(f'\n--- {field_name} ---')
-        
-        # ========== REACTION FORCES (Left and Right boundaries) ==========
-        # Use FEA stresses on boundaries
-        
-        # Left boundary (fixed, n_x = -1)
-        left_edges = get_boundary_edges_ordered(pos, is_fixed)
-        F_left = 0.0
-        
-        for node_i, node_j, normal_x in left_edges:
-            if abs(normal_x) < 0.1:  # Skip horizontal edges
-                continue
-            
-            # Edge length in mm
-            ds = calculate_edge_length(pos, node_i, node_j)
-            
-            # Average FEA stress at edge midpoint (Pa)
-            sigma_avg = 0.5 * (sigma_xx_FEA[node_i] + sigma_xx_FEA[node_j])
-            
-            # Traction: t_x = sigma_xx * n_x
-            # Force contribution: dF = t_x * ds * t
-            # σ (Pa) * n_x * ds (mm) * t (mm) → convert to N
-            F_left += sigma_avg * normal_x * ds * t * 1e-6  # N
-        
-        # Right boundary (displaced, n_x = +1)
-        right_edges = get_boundary_edges_ordered(pos, is_displaced)
-        F_right = 0.0
-        
-        for node_i, node_j, normal_x in right_edges:
-            if abs(normal_x) < 0.1:  # Skip horizontal edges
-                continue
-            
-            ds = calculate_edge_length(pos, node_i, node_j)
-            sigma_avg = 0.5 * (sigma_xx_FEA[node_i] + sigma_xx_FEA[node_j])
-            
-            F_right += sigma_avg * normal_x * ds * t * 1e-6  # N
-        
-        # Force balance check: F_left + F_right should ≈ 0
-        force_balance_error = abs(F_left + F_right) / max(abs(F_left), abs(F_right)) * 100 if max(abs(F_left), abs(F_right)) > 1e-15 else 0
-        
-        print(f"Left boundary force (F_left): {F_left:.2f} N")
-        print(f"Right boundary force (F_right): {F_right:.2f} N")
-        print(f"Force balance (F_left + F_right): {F_left + F_right:.2e} N")
-        print(f"Force Balance Error: {force_balance_error:.2f}%")
-        
-        # ========== EXTERNAL WORK (on displaced boundary) ==========
-        # W_ext = ∫_Γ_displaced σ·u·n_x ds
-        # Use FEA stresses and actual nodal displacements
-        
-        W_ext = 0.0
-        
-        for node_i, node_j, normal_x in right_edges:
-            if abs(normal_x) < 0.1:  # Skip horizontal edges
-                continue
-            
-            ds = calculate_edge_length(pos, node_i, node_j)
-            
-            # Average FEA stress (Pa)
-            sigma_avg = 0.5 * (sigma_xx_FEA[node_i] + sigma_xx_FEA[node_j])
-            
-            # Average displacement at edge (mm)
-            u_avg = 0.5 * (displacement_amount[node_i] + displacement_amount[node_j])
-            
-            # Work: dW = σ * u * n_x * ds * t
-            # σ (Pa) * u (mm) * n_x * ds (mm) * t (mm) → convert to J
-            W_ext += sigma_avg * u_avg * normal_x * ds * t * 1e-9  # J
-        
-        # ========== INTERNAL STRAIN ENERGY (Area Integration) ==========
-        # U_int = (1/2) ∫_A σ_FEA·ε dA
-        # Use FEA stresses × strains (ML or ground truth)
-        
-        U_int = 0.0
-        
-        for face in faces:
-            # Get vertices of triangle
-            v1, v2, v3 = pos[face[0]], pos[face[1]], pos[face[2]]
-            
-            # Calculate element area (mm²)
-            A_e = calculate_triangle_area(v1, v2, v3)
-            
-            # Average FEA stress in element (Pa)
-            sigma_avg = np.mean(sigma_xx_FEA[face])
-            
-            # Average strain in element (dimensionless) - use current strain field
-            eps_avg = np.mean(strain_field[face])
-            
-            # Add to internal energy: U = (1/2) * σ_FEA * ε * A * t
-            # σ (Pa) * ε * A (mm²) * t (mm) → convert to J
-            U_int += 0.5 * sigma_avg * eps_avg * A_e * t * 1e-9  # J
-        
-        # ========== CLAPEYRON'S THEOREM CHECK ==========
-        # W_ext should equal 2 * U_int
-        
-        energy_error = abs(W_ext - 2*U_int) / abs(W_ext) * 100 if abs(W_ext) > 1e-15 else 0
-        
-        # --- PRINT RESULTS ---
-        print(f"\nInternal Energy (U_int): {U_int:.6e} J")
-        print(f"External Work (W_ext): {W_ext:.6e} J")
-        print(f"\nClapeyron Check: W_ext = 2·U_int")
-        print(f"  W_ext = {W_ext:.6e} J")
-        print(f"  2·U_int = {2*U_int:.6e} J")
-        print(f"  Energy Error: {energy_error:.2f}%")
-        
-        # Store results
-        results[field_name] = {
-            'U_int': U_int,
-            'W_ext': W_ext,
-            'F_left': F_left,
-            'F_right': F_right,
-            'force_balance': F_left + F_right,
-            'force_balance_error': force_balance_error,
-            'energy_error': energy_error
-        }
-    
-    # ========== SAVE RESULTS TO FILE ==========
-    consistency_path = os.path.join(path, name + '_physical_consistency.txt')
-    with open(consistency_path, 'w') as f:
-        f.write("="*70 + "\n")
-        f.write("PHYSICAL CONSISTENCY VERIFICATION - CLAPEYRON'S THEOREM\n")
-        f.write("="*70 + "\n\n")
-        
-        f.write("--- Geometry Parameters ---\n")
-        f.write(f"Plate Length (L): {L:.2f} mm\n")
-        f.write(f"Plate Width (W): {W:.2f} mm\n")
-        f.write(f"Plate Thickness (t): {t:.2f} mm\n")
-        f.write(f"Laminate Modulus (E): {E_laminate/1e9:.2f} GPa\n\n")
-        
-        for field_name in ['Prediction', 'Ground Truth']:
-            r = results[field_name]
-            f.write(f"\n{'='*70}\n")
-            f.write(f"{field_name}\n")
-            f.write(f"{'='*70}\n")
-            f.write(f"Internal Energy (U_int): {r['U_int']:.6e} J\n")
-            f.write(f"External Work (W_ext): {r['W_ext']:.6e} J\n")
-            f.write(f"\nForce Balance Check:\n")
-            f.write(f"  Left boundary force (F_left): {r['F_left']:.2f} N\n")
-            f.write(f"  Right boundary force (F_right): {r['F_right']:.2f} N\n")
-            f.write(f"  Force balance (F_left + F_right): {r['force_balance']:.2e} N\n")
-            f.write(f"  Force Balance Error: {r['force_balance_error']:.2f}%\n")
-            f.write(f"\nClapeyron Check: W_ext = 2·U_int\n")
-            f.write(f"  W_ext = {r['W_ext']:.6e} J\n")
-            f.write(f"  2·U_int = {2*r['U_int']:.6e} J\n")
-            f.write(f"  Energy Error: {r['energy_error']:.2f}%\n")
-    
-    print(f"\nPhysical consistency results saved to: {consistency_path}")
-    
-    # ========== CREATE COMPARISON PLOT ==========
-    plot_physical_consistency(results, path, name)
-    
-    print('\n' + '='*70 + '\n')
-    
-    return results
-
-def plot_physical_consistency(results, path, name):
-    """Create a bar chart comparing physical consistency metrics"""
-    
-    # Set up high-quality fonts
-    plt.rcParams.update({
-        'text.usetex': True,
-        'font.family': 'serif',
-        'font.serif': ['CMU Serif', 'Computer Modern', 'serif'],
-        'font.size': 11,
-        'text.color': 'black',
-        'axes.labelcolor': 'black',
-        'xtick.color': 'black',
-        'ytick.color': 'black',
-        'svg.fonttype': 'none'
-    })
-    
-    fig, axes = plt.subplots(1, 2, figsize=(8, 3), dpi=300)
-    fig.patch.set_alpha(0)
-    
-    # Energy Error comparison
-    ax1 = axes[0]
-    ax1.patch.set_alpha(0)
-    energy_errors = [results['Ground Truth']['energy_error'], 
-                     results['Prediction']['energy_error']]
-    bars1 = ax1.bar(['Ground Truth', 'GNN Prediction'], energy_errors, 
-                    color=['#2E86AB', '#A23B72'], alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax1.set_ylabel('Energy Error (\%)')
-    ax1.set_title('Clapeyron Theorem Verification')
-    ax1.grid(True, axis='y', alpha=0.3, linestyle='--')
-    ax1.axhline(y=5, color='red', linestyle='--', linewidth=1, label='5\% threshold')
-    ax1.legend()
-    
-    # Add value labels on bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}\%', ha='center', va='bottom', fontsize=9)
-    
-    # Force Balance Error comparison
-    ax2 = axes[1]
-    ax2.patch.set_alpha(0)
-    force_errors = [results['Ground Truth']['force_balance_error'], 
-                    results['Prediction']['force_balance_error']]
-    bars2 = ax2.bar(['Ground Truth', 'GNN Prediction'], force_errors,
-                    color=['#2E86AB', '#A23B72'], alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax2.set_ylabel('Force Balance Error (\%)')
-    ax2.set_title('Force Equilibrium Verification')
-    ax2.grid(True, axis='y', alpha=0.3, linestyle='--')
-    ax2.axhline(y=5, color='red', linestyle='--', linewidth=1, label='5\% threshold')
-    ax2.legend()
-    
-    # Add value labels on bars
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}\%', ha='center', va='bottom', fontsize=9)
-    
-    plt.tight_layout()
-    
-    # Save plot
-    plot_path = os.path.join(path, f"{name}_physical_consistency.pdf")
-    plt.savefig(plot_path, format='pdf', bbox_inches='tight', transparent=False)
-    plt.close(fig)
-    
-    print(f"Physical consistency plot saved to: {plot_path}")
-    
-    # Reset matplotlib settings
-    plt.rcParams.update(plt.rcParamsDefault)
-
-def plot_physical_consistency(results, path, name):
-    """Create a bar chart comparing physical consistency metrics"""
-    
-    # Set up high-quality fonts
-    plt.rcParams.update({
-        'text.usetex': True,
-        'font.family': 'serif',
-        'font.serif': ['CMU Serif', 'Computer Modern', 'serif'],
-        'font.size': 11,
-        'text.color': 'black',
-        'axes.labelcolor': 'black',
-        'xtick.color': 'black',
-        'ytick.color': 'black',
-        'svg.fonttype': 'none'
-    })
-    
-    fig, axes = plt.subplots(1, 2, figsize=(8, 3), dpi=300)
-    fig.patch.set_alpha(0)
-    
-    # Energy Error comparison
-    ax1 = axes[0]
-    ax1.patch.set_alpha(0)
-    energy_errors = [results['Ground Truth']['energy_error'], 
-                     results['Prediction']['energy_error']]
-    bars1 = ax1.bar(['Ground Truth', 'GNN Prediction'], energy_errors, 
-                    color=['#2E86AB', '#A23B72'], alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax1.set_ylabel('Energy Error (\%)')
-    ax1.set_title('Clapeyron Theorem Verification')
-    ax1.grid(True, axis='y', alpha=0.3, linestyle='--')
-    ax1.axhline(y=5, color='red', linestyle='--', linewidth=1, label='5\% threshold')
-    ax1.legend()
-    
-    # Add value labels on bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}\%', ha='center', va='bottom', fontsize=9)
-    
-    # Force Error comparison
-    ax2 = axes[1]
-    ax2.patch.set_alpha(0)
-    force_errors = [results['Ground Truth']['force_balance_error'], 
-                    results['Prediction']['force_balance_error']]
-    bars2 = ax2.bar(['Ground Truth', 'GNN Prediction'], force_errors,
-                    color=['#2E86AB', '#A23B72'], alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax2.set_ylabel('Force Error (\%)')
-    ax2.set_title('Force Equilibrium Verification')
-    ax2.grid(True, axis='y', alpha=0.3, linestyle='--')
-    ax2.axhline(y=5, color='red', linestyle='--', linewidth=1, label='5\% threshold')
-    ax2.legend()
-    
-    # Add value labels on bars
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}\%', ha='center', va='bottom', fontsize=9)
-    
-    plt.tight_layout()
-    
-    # Save plot
-    plot_path = os.path.join(path, f"{name}_physical_consistency.pdf")
-    plt.savefig(plot_path, format='pdf', bbox_inches='tight', transparent=False)
-    plt.close(fig)
-    
-    print(f"Physical consistency plot saved to: {plot_path}")
-    
-    # Reset matplotlib settings
-    plt.rcParams.update(plt.rcParamsDefault)
-
 # Add this function after the verify_physical_consistency function and before the analyze_node_features call
 
 def benchmark_inference_time(model, test_dataset, device, stats_list, num_runs=100):
@@ -1912,8 +1497,8 @@ def benchmark_inference_time(model, test_dataset, device, stats_list, num_runs=1
     
     with torch.no_grad():
         for _ in range(num_runs):
-            prediction = model(sample, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
-            
+            model(sample, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
+
     if device == 'cuda':
         torch.cuda.synchronize()
     end_time = time.time()
@@ -1934,12 +1519,12 @@ def benchmark_inference_time(model, test_dataset, device, stats_list, num_runs=1
         'time_saved': actual_fem_time - avg_inference_time
     }
     
-    print(f"\nGNN Inference Results:")
+    print("\nGNN Inference Results:")
     print(f"  Average inference time: {avg_inference_time*1000:.3f} ms ({avg_inference_time:.6f} s)")
     print(f"  Total time for {num_runs} runs: {total_inference_time:.3f} seconds")
     print(f"  Inference frequency: {1/avg_inference_time:.1f} predictions/second")
     
-    print(f"\nSpeedup Analysis vs FEM:")
+    print("\nSpeedup Analysis vs FEM:")
     print(f"  Abaqus FEM time: {actual_fem_time:.1f} seconds")
     print(f"  GNN inference time: {avg_inference_time*1000:.3f} ms")
     print(f"  Speedup: {results['speedup']:.0f}× faster than FEM")
@@ -1950,28 +1535,28 @@ def benchmark_inference_time(model, test_dataset, device, stats_list, num_runs=1
     time_saved_per_pred = results['time_saved']
     breakeven_predictions = training_time_estimate / time_saved_per_pred if time_saved_per_pred > 0 else float('inf')
     
-    print(f"\nBreak-even Analysis:")
+    print("\nBreak-even Analysis:")
     print(f"  Training time estimate: {training_time_estimate/3600:.1f} hours")
     print(f"  Break-even point: {breakeven_predictions:.0f} predictions")
     print(f"  Training ROI: Profitable after {breakeven_predictions:.0f} simulations")
     
     # Save results to file
-    benchmark_path = os.path.join(postprocess_dir, 'inference_benchmark.txt')
+    benchmark_path = str(config_paths.ANIMATIONS_DIR / 'inference_benchmark.txt')
     with open(benchmark_path, 'w') as f:
         f.write("="*60 + "\n")
         f.write("INFERENCE TIME BENCHMARK\n")
         f.write("="*60 + "\n\n")
-        f.write(f"GNN Inference Results:\n")
+        f.write("GNN Inference Results:\n")
         f.write(f"  Average inference time: {avg_inference_time*1000:.3f} ms ({avg_inference_time:.6f} s)\n")
         f.write(f"  Number of runs: {num_runs}\n")
         f.write(f"  Total time: {total_inference_time:.3f} seconds\n")
         f.write(f"  Inference frequency: {1/avg_inference_time:.1f} predictions/second\n\n")
-        f.write(f"Speedup Analysis vs FEM:\n")
+        f.write("Speedup Analysis vs FEM:\n")
         f.write(f"  Abaqus FEM time: {actual_fem_time:.1f} seconds\n")
         f.write(f"  GNN inference time: {avg_inference_time*1000:.3f} ms\n")
         f.write(f"  Speedup: {results['speedup']:.0f}× faster\n")
         f.write(f"  Time saved per prediction: {results['time_saved']:.3f} seconds\n\n")
-        f.write(f"Break-even Analysis:\n")
+        f.write("Break-even Analysis:\n")
         f.write(f"  Training time estimate: {training_time_estimate/3600:.1f} hours\n")
         f.write(f"  Break-even point: {breakeven_predictions:.0f} predictions\n")
         f.write(f"  Training ROI: Profitable after {breakeven_predictions:.0f} simulations\n")
@@ -2019,7 +1604,7 @@ print(device)
 num_node_features = test_dataset[0].x.shape[1]
 num_edge_features = test_dataset[0].edge_attr.shape[1]
 num_classes = 1
-best_model = MeshGraphNet(num_node_features, num_edge_features, 
+best_model = FCLGA_GraphTransformer(num_node_features, num_edge_features, 
                         args.hidden_dim, num_classes, args).to(device)
 
 # Load the saved model weights

@@ -2,8 +2,7 @@
 *******************************************************************************
 *                                                                             *
 *   AUTHOR: Luca Patrignani - PhD candidate Imperial College London           *
-*   TITLE: GNN MeshGraphNets Training and Testing                             *
-*   DATE: 24/02/2025                                                          *
+*   TITLE: FCLGA GraphTransformer Training and Testing                        *
 *                                                                             *
 *******************************************************************************
 *                                                                             *
@@ -11,8 +10,8 @@
 *  ============                                                               *
 *  This Python script was meticulously crafted to design and develop a GNN    *
 *  to solve a mesh graph problem using PyTorch and PyTorch Geometric.         *
-*  This version, GNN_MeshGraphNets_Train_Test_Luca, is a variation of the     *
-*  original GNN_MeshGraphNets_Train_Test script, utilizing Luca's model.      *
+*  This version implements the FCLGA GraphTransformer model with advanced     *
+*  attention mechanisms and message passing for structural mechanics.          *
 *                                                                             *
 *  Rights:                                                                    *
 *  ======                                                                     *
@@ -20,9 +19,6 @@
 *                                                                             *
 *******************************************************************************
 """
-
-
-# to check if I remove the global attention, then how fast is it?
 
 import torch
 import random
@@ -44,13 +40,14 @@ import pandas as pd
 import copy
 import matplotlib.pyplot as plt
 import os
-import h5py
-# import tensorflow.compat.v1 as tf
+# import h5py  # Commented out - not used
+# import tensorflow.compat.v1 as tf  # Commented out - not used
 import functools
 import json
 from torch_geometric.data import Data
 import enum
 import math
+import argparse
 
 import os
 import datetime
@@ -65,555 +62,273 @@ import seaborn as sns
 from matplotlib.patches import Rectangle
 import numpy as np
 
-def create_journal_quality_timing_plots(df, results_folder):
-    """
-    Create high-quality timing analysis plots suitable for journal publication.
-    """
-    # Set style for publication quality
-    plt.style.use('default')
-    sns.set_palette("husl")
-    
-    # Create figure with subplots
-    fig = plt.figure(figsize=(16, 12))
-    gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 1], width_ratios=[1, 1], 
-                         hspace=0.3, wspace=0.25)
-    
-    # Define colors for consistency
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#592E83']
-    
-    # Plot 1: Training Time vs Attention Frequency (Top Left)
-    ax1 = fig.add_subplot(gs[0, 0])
-    
-    x_vals = df['expected_calls'].values
-    y_vals = df['time_per_epoch'].values
-    
-    # Plot line with markers
-    ax1.plot(x_vals, y_vals, 'o-', linewidth=3, markersize=10, 
-             color=colors[0], markerfacecolor='white', markeredgewidth=2, 
-             markeredgecolor=colors[0])
-    
-    # Add value labels
-    for i, (x, y) in enumerate(zip(x_vals, y_vals)):
-        ax1.annotate(f'{y:.2f}s', (x, y), textcoords="offset points", 
-                    xytext=(0,15), ha='center', fontsize=11, 
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor='white', 
-                             edgecolor=colors[0], alpha=0.8))
-    
-    ax1.set_xlabel('Number of Global Attention Calls', fontsize=14, fontweight='bold')
-    ax1.set_ylabel('Time per Epoch (seconds)', fontsize=14, fontweight='bold')
-    ax1.set_title('(a) Training Time vs Attention Frequency', fontsize=16, fontweight='bold', pad=20)
-    ax1.grid(True, alpha=0.3, linestyle='--')
-    ax1.set_xlim(-0.3, 6.3)
-    ax1.tick_params(axis='both', which='major', labelsize=12)
-    
-    # Plot 2: Computational Overhead (Top Right)
-    ax2 = fig.add_subplot(gs[0, 1])
-    
-    bars = ax2.bar(range(len(df)), df['overhead_vs_baseline'], 
-                   color=[colors[i] for i in range(len(df))], 
-                   alpha=0.8, edgecolor='black', linewidth=1.5)
-    
-    # Add value labels on bars
-    for i, (bar, overhead) in enumerate(zip(bars, df['overhead_vs_baseline'])):
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height + 0.05, 
-                f'{overhead:.2f}×', ha='center', va='bottom', 
-                fontsize=11, fontweight='bold')
-    
-    ax2.set_xlabel('Attention Configuration', fontsize=14, fontweight='bold')
-    ax2.set_ylabel('Overhead vs Baseline (×)', fontsize=14, fontweight='bold')
-    ax2.set_title('(b) Computational Overhead Analysis', fontsize=16, fontweight='bold', pad=20)
-    ax2.set_xticks(range(len(df)))
-    ax2.set_xticklabels([f"{int(calls)} calls" for calls in df['expected_calls']], 
-                       rotation=45, ha='right')
-    ax2.grid(True, alpha=0.3, axis='y', linestyle='--')
-    ax2.tick_params(axis='both', which='major', labelsize=12)
-    
-    # Plot 3: Linear Scaling Analysis (Middle Left)
-    ax3 = fig.add_subplot(gs[1, 0])
-    
-    # Theoretical linear fit
-    x_theory = np.array([0, 1, 2, 3, 6])
-    baseline = df[df['expected_calls'] == 0]['time_per_epoch'].iloc[0]
-    
-    # Calculate linear regression
-    slope = (df['time_per_epoch'].iloc[-1] - baseline) / 6  # slope per attention call
-    y_theory = baseline + slope * x_theory
-    
-    # Plot empirical data
-    ax3.plot(x_vals, y_vals, 'o', markersize=12, color=colors[1], 
-             label='Empirical Data', markerfacecolor='white', 
-             markeredgewidth=3, markeredgecolor=colors[1])
-    
-    # Plot theoretical line
-    ax3.plot(x_theory, y_theory, '--', linewidth=3, color=colors[2], 
-             label='Linear Fit', alpha=0.8)
-    
-    # Calculate R-squared
-    y_pred = baseline + slope * x_vals
-    ss_res = np.sum((y_vals - y_pred) ** 2)
-    ss_tot = np.sum((y_vals - np.mean(y_vals)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    
-    ax3.text(0.05, 0.95, f'R² = {r_squared:.3f}\nSlope = {slope:.3f} s/call', 
-             transform=ax3.transAxes, fontsize=12, verticalalignment='top',
-             bbox=dict(boxstyle="round,pad=0.5", facecolor='white', 
-                      edgecolor='gray', alpha=0.9))
-    
-    ax3.set_xlabel('Number of Global Attention Calls', fontsize=14, fontweight='bold')
-    ax3.set_ylabel('Time per Epoch (seconds)', fontsize=14, fontweight='bold')
-    ax3.set_title('(c) Linear Scaling Validation', fontsize=16, fontweight='bold', pad=20)
-    ax3.legend(fontsize=12, loc='lower right')
-    ax3.grid(True, alpha=0.3, linestyle='--')
-    ax3.tick_params(axis='both', which='major', labelsize=12)
-    
-    # Plot 4: Operation Count Analysis (Middle Right)
-    ax4 = fig.add_subplot(gs[1, 1])
-    
-    # Calculate theoretical operations
-    hidden_dim = 48
-    num_nodes = 1000
-    num_edges = 3000
-    num_layers = 6
-    
-    message_passing_ops = num_layers * num_edges * (hidden_dim ** 2) / 1e6  # Convert to millions
-    attention_ops = df['expected_calls'] * (num_nodes ** 2) * hidden_dim / 1e6
-    
-    width = 0.6
-    x_pos = np.arange(len(df))
-    
-    bars1 = ax4.bar(x_pos, [message_passing_ops] * len(df), width, 
-                   label='Message Passing', color=colors[0], alpha=0.8)
-    bars2 = ax4.bar(x_pos, attention_ops, width, bottom=[message_passing_ops] * len(df),
-                   label='Global Attention', color=colors[3], alpha=0.8)
-    
-    # Add total operation labels
-    for i, (mp, att) in enumerate(zip([message_passing_ops] * len(df), attention_ops)):
-        total = mp + att
-        ax4.text(i, total + 5, f'{total:.0f}M', ha='center', va='bottom', 
-                fontsize=10, fontweight='bold')
-    
-    ax4.set_xlabel('Attention Configuration', fontsize=14, fontweight='bold')
-    ax4.set_ylabel('Operations (Millions)', fontsize=14, fontweight='bold')
-    ax4.set_title('(d) Theoretical Operation Count', fontsize=16, fontweight='bold', pad=20)
-    ax4.set_xticks(x_pos)
-    ax4.set_xticklabels([f"{int(calls)} calls" for calls in df['expected_calls']], 
-                       rotation=45, ha='right')
-    ax4.legend(fontsize=12)
-    ax4.grid(True, alpha=0.3, axis='y', linestyle='--')
-    ax4.tick_params(axis='both', which='major', labelsize=12)
-    
-    # Plot 5: Efficiency Analysis (Bottom Spanning)
-    ax5 = fig.add_subplot(gs[2, :])
-    
-    # Calculate efficiency metrics
-    operations_total = message_passing_ops + attention_ops
-    efficiency = y_vals / operations_total * 1000  # Time per million operations
-    
-    # Create dual y-axis plot
-    ax5_twin = ax5.twinx()
-    
-    # Plot bars for total operations
-    bars = ax5.bar(x_pos, operations_total, width=0.6, alpha=0.6, 
-                  color=colors[4], label='Total Operations')
-    
-    # Plot line for timing efficiency
-    line = ax5_twin.plot(x_pos, efficiency, 'o-', linewidth=3, markersize=8, 
-                        color=colors[1], label='Time per MOp')
-    
-    ax5.set_xlabel('Number of Global Attention Calls', fontsize=14, fontweight='bold')
-    ax5.set_ylabel('Total Operations (Millions)', fontsize=14, fontweight='bold', color=colors[4])
-    ax5_twin.set_ylabel('Time per Million Operations (ms)', fontsize=14, fontweight='bold', color=colors[1])
-    ax5.set_title('(e) Computational Efficiency Analysis', fontsize=16, fontweight='bold', pad=20)
-    
-    ax5.set_xticks(x_pos)
-    ax5.set_xticklabels([f"{int(calls)}" for calls in df['expected_calls']])
-    ax5.grid(True, alpha=0.3, axis='y', linestyle='--')
-    ax5.tick_params(axis='both', which='major', labelsize=12)
-    ax5_twin.tick_params(axis='both', which='major', labelsize=12)
-    
-    # Color the y-axis labels to match the data
-    ax5.tick_params(axis='y', colors=colors[4])
-    ax5_twin.tick_params(axis='y', colors=colors[1])
-    
-    # Add combined legend
-    lines1, labels1 = ax5.get_legend_handles_labels()
-    lines2, labels2 = ax5_twin.get_legend_handles_labels()
-    ax5.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=12)
-    
-    # Overall title
-    fig.suptitle('Computational Complexity Analysis: Global Attention Impact on MeshGraphNet Training', 
-                fontsize=18, fontweight='bold', y=0.98)
-    
-    # Save high-resolution figure
-    plot_path = os.path.join(results_folder, 'journal_timing_analysis.png')
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight', facecolor='white')
-    
-    # Also save as PDF for vector graphics
-    pdf_path = os.path.join(results_folder, 'journal_timing_analysis.pdf')
-    plt.savefig(pdf_path, bbox_inches='tight', facecolor='white')
-    
-    plt.show()
-    
-    print(f"High-quality plots saved to:")
-    print(f"  PNG: {plot_path}")
-    print(f"  PDF: {pdf_path}")
-    
-    return fig
+# Import utilities
+from src.utils.training_utils import (
+    create_results_folder, 
+    test, 
+    evaluate_final_model
+)
+from src.utils.benchmark_utils import (
+    benchmark_attention_frequencies,
+    analyze_timing_results,
+    create_summary_table,
+    save_timing_results,
+    benchmark_inference_time,
+    save_speedup_analysis
+)
 
-def create_summary_table(df, results_folder):
-    """
-    Create a formatted summary table for the paper.
-    """
-    # Create a comprehensive summary
-    summary_data = []
-    
-    baseline_time = df[df['expected_calls'] == 0]['time_per_epoch'].iloc[0]
-    
-    for _, row in df.iterrows():
-        summary_data.append({
-            'Configuration': row['description'],
-            'Attention Calls': int(row['expected_calls']),
-            'Time per Epoch (s)': f"{row['time_per_epoch']:.3f}",
-            'Overhead': f"{row['overhead_vs_baseline']:.2f}×",
-            'Additional Time (s)': f"{row['time_per_epoch'] - baseline_time:.3f}",
-            'Efficiency (s/call)': f"{(row['time_per_epoch'] - baseline_time) / max(row['expected_calls'], 1):.3f}" if row['expected_calls'] > 0 else "N/A"
-        })
-    
-    summary_df = pd.DataFrame(summary_data)
-    
-    # Save to CSV
-    csv_path = os.path.join(results_folder, 'timing_analysis_summary.csv')
-    summary_df.to_csv(csv_path, index=False)
-    
-    # Create LaTeX table
-    latex_table = summary_df.to_latex(index=False, escape=False, 
-                                     caption="Computational timing analysis for different global attention frequencies.",
-                                     label="tab:timing_analysis")
-    
-    # Save LaTeX table
-    latex_path = os.path.join(results_folder, 'timing_analysis_table.tex')
-    with open(latex_path, 'w') as f:
-        f.write(latex_table)
-    
-    print(f"\nSummary table saved to:")
-    print(f"  CSV: {csv_path}")
-    print(f"  LaTeX: {latex_path}")
-    
-    return summary_df
+# Import visualization functions
+from src.utils.visualization import visualize, plot_results, save_plots
 
-# Update your save_timing_results function:
-def save_timing_results(df, results_folder):
-    """
-    Save timing results with journal-quality visualizations.
-    """
-    # Save raw data
-    csv_path = os.path.join(results_folder, 'timing_benchmark.csv')
-    df.to_csv(csv_path, index=False)
-    print(f"\nResults saved to: {csv_path}")
+# Module-level initialization moved to main block
+# print(dataset)  # Moved to main
+# len(dataset_full_timesteps)/5  # Moved to main
+
+
+def run_optuna_optimization(args):
+    """Run Optuna hyperparameter optimization - matches legacy implementation."""
+    import optuna
+    from optuna.visualization import plot_optimization_history, plot_param_importances
+    import pickle
     
-    # Create journal-quality plots
-    fig = create_journal_quality_timing_plots(df, results_folder)
+    # LEGACY: Set up global directories for train() function (same as legacy module-level setup)
+    global checkpoint_dir, postprocess_dir
+    results_folder = create_results_folder()
+    checkpoint_dir = os.path.join(results_folder, 'best_models')
+    postprocess_dir = os.path.join(results_folder, 'plots')
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(postprocess_dir, exist_ok=True)
     
-    # Create summary table
-    summary_df = create_summary_table(df, results_folder)
-    
-    # Print results summary
-    print("\n" + "="*80)
-    print("JOURNAL-QUALITY TIMING ANALYSIS COMPLETE")
     print("="*80)
-    print(summary_df.to_string(index=False))
+    print("OPTUNA HYPERPARAMETER OPTIMIZATION")
+    print("="*80)
+    print(f"Trials: {args.optuna_trials}")
+    print(f"Epochs per trial: {args.epochs}")
+    print("="*80)
     
-    return fig, summary_df
+    # Load dataset once for all trials
+    file_path = os.path.join(os.getcwd(), 'datasets', 'processed_data.pt')
+    if not os.path.exists(file_path):
+        file_path = os.path.join(os.getcwd(), 'data', 'processed', 'datasets', 'processed_data.pt')
+    
+    def objective(trial):
+        # Set seeds for reproducibility within each trial (LEGACY LOGIC)
+        torch.manual_seed(42 + trial.number)  # Different seed per trial
+        random.seed(42 + trial.number)
+        np.random.seed(42 + trial.number)
+        
+        num_layers = trial.suggest_int('num_layers', 4, 8)
 
-def benchmark_attention_frequencies(dataset, device, stats_list, base_args, num_epochs=5):
-    """
-    Benchmark different attention frequencies to measure timing and complexity.
-    """
-    # Test configurations: attention_freq values and their descriptions
-    test_configs = [
-        (999, "No attention", 0),      # No attention (freq > num_layers)
-        (6, "Every 6 layers", 1),      # Every 6 layers = 1 call
-        (3, "Every 3 layers", 2),      # Every 3 layers = 2 calls  
-        (2, "Every 2 layers", 3),      # Every 2 layers = 3 calls
-        (1, "Every 1 layer", 6),       # Every layer = 6 calls
-    ]
-    
-    results = []
-    
-    # Use smaller dataset for timing tests
-    test_dataset = dataset[:400]  # Use first 50 samples for quick testing
-    
-    for freq, description, expected_calls in test_configs:
-        print(f"\nTesting: {description} (freq={freq})")
-        
-        # Create args for this configuration
-        test_args = copy.deepcopy(base_args)
-        test_args.attention_freq = freq
-        test_args.epochs = num_epochs
-        
-        # Create model
-        num_node_features = test_dataset[0].x.shape[1]
-        num_edge_features = test_dataset[0].edge_attr.shape[1]
-        model = MeshGraphNet(num_node_features, num_edge_features, 
-                           test_args.hidden_dim, 1, test_args).to(device)
-        
-        # Create data loader
-        loader = DataLoader(test_dataset, batch_size=test_args.batch_size, shuffle=False)
-        
-        # Get stats
-        [mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y] = stats_list
-        stats_gpu = [s.to(device) for s in stats_list]
-        
-        # Build optimizer
-        scheduler, opt = build_optimizer(test_args, model.parameters())
-        
-        # Warm up GPU
-        model.train()
-        for batch in loader:
-            batch = batch.to(device)
-            pred = model(batch, *stats_gpu[:4])
-            loss = model.loss(pred, batch, *stats_gpu[4:])
-            break
-        
-        # Time the training
-        torch.cuda.synchronize() if device == 'cuda' else None
-        start_time = time.time()
-        
-        total_loss = 0
-        num_batches = 0
-        
-        for epoch in range(num_epochs):
-            for batch in loader:
-                batch = batch.to(device)
-                opt.zero_grad()
-                pred = model(batch, *stats_gpu[:4])
-                loss = model.loss(pred, batch, *stats_gpu[4:])
-                loss.backward()
-                opt.step()
-                total_loss += loss.item()
-                num_batches += 1
-        
-        torch.cuda.synchronize() if device == 'cuda' else None
-        end_time = time.time()
-        
-        # Calculate metrics
-        total_time = end_time - start_time
-        time_per_epoch = total_time / num_epochs
-        avg_loss = total_loss / num_batches
-        
-        # Store results
-        result = {
-            'attention_freq': freq,
-            'description': description,
-            'expected_calls': expected_calls,
-            'time_per_epoch': time_per_epoch,
-            'total_time': total_time,
-            'avg_loss': avg_loss,
-            'num_epochs': num_epochs
+        # LEGACY: Conditional attention frequency bounds based on num_layers
+        if num_layers <= 4:
+            attention_freq = num_layers  # Only at the end for very small models
+        elif num_layers <= 6:
+            attention_freq = trial.suggest_int('attention_freq', 3, num_layers)  # Every 3+ layers
+        else:
+            attention_freq = trial.suggest_int('attention_freq', 4, 8)  # Every 4-8 layers
+
+        trial_args = {
+            'model_type': 'fclga',
+            'num_layers': num_layers,
+            'batch_size': trial.suggest_categorical('batch_size', [4, 8, 12]),
+            'hidden_dim': trial.suggest_categorical('hidden_dim', [48, 64, 96, 128]),
+            'dropout_rate': trial.suggest_float('dropout_rate', 0.1, 0.3),
+            'attention_freq': attention_freq,  # Use the conditional logic
+            'epochs': args.epochs,
+            'opt': trial.suggest_categorical('opt', ['adam', 'rmsprop']),
+            'opt_scheduler': 'step',
+            'opt_decay_step': trial.suggest_int('opt_decay_step', 40, 80),
+            'opt_decay_rate': trial.suggest_float('opt_decay_rate', 0.65, 0.85),
+            'opt_restart': 0,
+            'weight_decay': trial.suggest_float('weight_decay', 1e-7, 1e-4, log=True),
+            'lr': trial.suggest_float('lr', 1e-4, 8e-3, log=True),
+            'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+            'shuffle': True,
+            'save_velo_val': True,
+            'save_best_model': False,  # Don't save during optimization
         }
-        results.append(result)
         
-        print(f"  Time per epoch: {time_per_epoch:.3f}s")
-        print(f"  Average loss: {avg_loss:.6f}")
+        # LEGACY: Memory constraint
+        if trial_args['hidden_dim'] > 64 and trial_args['batch_size'] > 8:
+            trial_args['num_layers'] = min(trial_args['num_layers'], 6)
         
-        # Clean up
-        del model, loader
-        torch.cuda.empty_cache() if device == 'cuda' else None
+        # Convert to objectview
+        trial_args_obj = objectview(trial_args)
+        
+        try:
+            # LEGACY: Load and split dataset with 70/15/15 split
+            dataset = torch.load(file_path, weights_only=False)
+            
+            # Calculate split sizes
+            total_size = len(dataset)
+            train_size = int(total_size * 0.7)
+            val_size = int(total_size * 0.15)
+            
+            # Create the splits
+            if trial_args['shuffle']:
+                random.shuffle(dataset)
+            
+            train_dataset = dataset[:train_size]
+            val_dataset = dataset[train_size:train_size+val_size]
+            
+            # Update args
+            trial_args_obj.train_size = train_size
+            trial_args_obj.val_size = val_size
+            trial_args_obj.test_size = total_size - train_size - val_size
+            
+            # LEGACY: Get statistics for normalization (only use training data)
+            stats_list = get_stats(train_dataset)
+            
+            # Train model
+            print(f"\nTrial {trial.number}: layers={trial_args['num_layers']}, "
+                  f"hidden={trial_args['hidden_dim']}, lr={trial_args['lr']:.2e}")
+            
+            val_losses, losses, _, _ = train(train_dataset, val_dataset, trial_args_obj.device, 
+                                              stats_list, trial_args_obj)
+            
+            # Clean up GPU memory
+            torch.cuda.empty_cache()
+            
+            # Return best validation loss
+            return min(val_losses)
+        
+        except Exception as e:
+            print(f"Trial {trial.number} failed with error: {e}")
+            # Return a large value to indicate failure
+            return float('inf')
     
-    return results
-
-def analyze_timing_results(results):
-    """
-    Analyze and display timing results with complexity calculations.
-    """
-    df = pd.DataFrame(results)
+    # Create study
+    study = optuna.create_study(direction='minimize')
+    study.optimize(objective, n_trials=args.optuna_trials)
     
-    # Calculate overhead vs baseline (no attention)
-    baseline_time = df[df['expected_calls'] == 0]['time_per_epoch'].iloc[0]
-    df['overhead_vs_baseline'] = df['time_per_epoch'] / baseline_time
-    
+    # Print results
     print("\n" + "="*80)
-    print("TIMING BENCHMARK RESULTS")
+    print("OPTIMIZATION COMPLETE")
+    print("="*80)
+    print(f"Best trial: {study.best_trial.number}")
+    print(f"Best validation loss: {study.best_value:.6f}")
+    print("\nBest hyperparameters:")
+    for key, value in study.best_params.items():
+        print(f"  {key}: {value}")
+    
+    # Save study
+    results_dir = Path('results')
+    results_dir.mkdir(exist_ok=True)
+    
+    study_path = results_dir / 'optuna_study.pkl'
+    with open(study_path, 'wb') as f:
+        pickle.dump(study, f)
+    print(f"\n✓ Study saved to {study_path}")
+    
+    # Generate visualization plots
+    try:
+        viz_dir = results_dir / 'optuna_visualizations'
+        viz_dir.mkdir(exist_ok=True)
+        
+        fig1 = plot_optimization_history(study)
+        fig1.write_image(str(viz_dir / 'optimization_history.png'))
+        
+        fig2 = plot_param_importances(study)
+        fig2.write_image(str(viz_dir / 'param_importances.png'))
+        
+        print(f"✓ Visualizations saved to {viz_dir}/")
+    except Exception as e:
+        print(f"⚠ Could not generate plots: {e}")
+    
     print("="*80)
     
-    print(f"{'Description':<20} {'Calls':<6} {'Time/Epoch':<12} {'Overhead':<10}")
-    print("-" * 50)
-    
-    for _, row in df.iterrows():
-        print(f"{row['description']:<20} {row['expected_calls']:<6} "
-              f"{row['time_per_epoch']:.3f}s{'':<6} {row['overhead_vs_baseline']:.2f}×")
-    
-    # Calculate theoretical operations (assuming 1000 nodes, 3000 edges, hidden_dim=48)
-    hidden_dim = 48  # From your config
-    num_nodes = 1000  # Approximate
-    num_edges = 3000  # Approximate
-    num_layers = 6
-    
-    print(f"\n{'Description':<20} {'Message Passing Ops':<20} {'Attention Ops':<15} {'Total Ops':<15}")
-    print("-" * 70)
-    
-    message_passing_ops = num_layers * num_edges * (hidden_dim ** 2)
-    
-    for _, row in df.iterrows():
-        attention_ops = row['expected_calls'] * (num_nodes ** 2) * hidden_dim
-        total_ops = message_passing_ops + attention_ops
+    # LEGACY: Train final model with best hyperparameters if requested
+    if args.final_epochs is not None:
+        print("\n" + "="*80)
+        print("TRAINING FINAL MODEL WITH BEST HYPERPARAMETERS")
+        print("="*80)
+        print(f"Epochs: {args.final_epochs}")
         
-        print(f"{row['description']:<20} {message_passing_ops/1e6:.1f}M{'':<15} "
-              f"{attention_ops/1e6:.1f}M{'':<10} {total_ops/1e6:.1f}M")
-    
-    return df
-
-def create_results_folder():
-    # Get current timestamp in the format YYYYMMDD_HHMMSS
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Create the folder name with the timestamp
-    result_dir = f"0_standard_{timestamp}"
-    
-    # Create the full path (assuming you want it in the current directory)
-    full_path = Path(os.getcwd()) / "results" / result_dir
-    
-    # Create the directory if it doesn't exist
-    os.makedirs(full_path, exist_ok=True)
-    
-    return full_path
-
-# Use it like this:
-results_folder = create_results_folder()
-
-# Define directories for datasets, checkpoints, and postprocessing
-root_dir = os.getcwd()
-dataset_dir = os.path.join(root_dir, 'datasets')
-
-# Fix: Use results_folder for output directories instead of root_dir
-checkpoint_dir = os.path.join(results_folder, 'best_models')
-postprocess_dir = os.path.join(results_folder, 'plots')
-
-# Create these subdirectories
-os.makedirs(checkpoint_dir, exist_ok=True)
-os.makedirs(postprocess_dir, exist_ok=True)
-
-
-gnn_data_path = os.path.join(dataset_dir, 'processed_data.pt')
-data = torch.load(gnn_data_path,weights_only=False)
-
-#Define the list that will return the data graphs
-data_list = []
-
-
-def visualize(loader_original, model, file_dir, plot_name, stats_list, sample_index=0):
-    model.eval()
-    device = next(model.parameters()).device
-    [mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y] = stats_list
-    
-    # Move statistics to device
-    mean_vec_x, std_vec_x = mean_vec_x.to(device), std_vec_x.to(device)
-    mean_vec_edge, std_vec_edge = mean_vec_edge.to(device), std_vec_edge.to(device)
-    mean_vec_y, std_vec_y = mean_vec_y.to(device), std_vec_y.to(device)
-    
-    # Create a new loader with batch size 1 just for visualization
-    if hasattr(loader_original.dataset, '__getitem__'):
-        # Get the specific sample we want to visualize
-        single_sample = loader_original.dataset[sample_index]
-        single_sample = single_sample.to(device)
+        # LEGACY: Start with all trial params (like create_best_params_from_trial)
+        best_params = study.best_params.copy()
         
-        with torch.no_grad():
-            pred = model(single_sample, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
-            pred = unnormalize(pred, mean_vec_y, std_vec_y)
+        # LEGACY: Reconstruct attention_freq if not in params (happens when num_layers <= 4)
+        if 'attention_freq' not in best_params:
+            num_layers = best_params['num_layers']
+            if num_layers <= 4:
+                best_params['attention_freq'] = num_layers
+            elif num_layers <= 6:
+                # Should not happen, but use num_layers as fallback
+                best_params['attention_freq'] = num_layers
+            else:
+                # Should not happen, but use 4 as fallback
+                best_params['attention_freq'] = 4
         
-        plot_results(single_sample, pred, file_dir, plot_name)
-
-def plot_results(data, prediction, path, name, remote_stress=0.01):
-    print('Generating stress fields...')
-    fig, axes = plt.subplots(1, 4, figsize=(26, 5))  # Adjust subplot for an additional plot
-    
-    # Ensure data is on CPU for matplotlib processing
-    pos = data.mesh_pos.cpu().numpy()
-    faces = data.cells.cpu().numpy()
-    
-    # Prepare the ground truth, prediction, error, and relative error data
-    gs_stress = data.y[:, 0].cpu().numpy()
-    pred_stress = prediction[:, 0].cpu().numpy()
-    error_stress = pred_stress - gs_stress
-    epsilon = 1e-10
-    # relative_error_stress = ((pred_stress - gs_stress) / (np.abs(gs_stress) + epsilon)) * 100
-    relative_error_stress = ((pred_stress - gs_stress) / remote_stress) * 100  # Relative error calculation
-
-    # Print diagnostic information
-    print(f"Ground truth range: {gs_stress.min():.6f} to {gs_stress.max():.6f}")
-    print(f"Prediction range: {pred_stress.min():.6f} to {pred_stress.max():.6f}")
-    print(f"Absolute error range: {error_stress.min():.6f} to {error_stress.max():.6f}")
-    print(f"Relative error range: {relative_error_stress.min():.2f}% to {relative_error_stress.max():.2f}%")
-
-    # Find common min and max for consistent coloring across first 3 plots
-    vmin = min(gs_stress.min(), pred_stress.min(), error_stress.min())
-    vmax = max(gs_stress.max(), pred_stress.max(), error_stress.max())
-    
-    titles = ['Ground Truth', 'Prediction', 'Error', 'Relative Error (%)']
-    stresses = [gs_stress, pred_stress, error_stress, relative_error_stress]
-    max_stress = max(gs_stress.max(), pred_stress.max())
-    max_error = abs(error_stress).max()
-    clim = [(0, max_stress), (0, max_stress), (-0.5*max_stress, 0.5*max_stress), (-20, 20)]
-
-    for ax, stress, title, clims in zip(axes, stresses, titles, clim):
-        ax.cla()
-        ax.set_aspect('equal')
-        ax.set_axis_off()
-        triang = mtri.Triangulation(pos[:, 0], pos[:, 1], faces)
-        cmap_choice = 'viridis' if title != 'Relative Error (%)' else 'coolwarm'
-        mesh_plot = ax.tripcolor(triang, stress, shading='flat', cmap=cmap_choice, vmin=clims[0], vmax=clims[1])
-        ax.triplot(triang, 'ko-', ms=0.5, lw=0.3)
-        ax.set_title(title)
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        clb = fig.colorbar(mesh_plot, cax=cax, orientation='vertical')
-        if title == 'Relative Error (%)':
-            clb.set_label('% Error')  # Label the colorbar meaningfully for relative error
-
-    # Save the plotted data
-    if not os.path.exists(path):
-        os.makedirs(path)
-    
-    # Save numerical data for later use
-    data_path = os.path.join(path, name + '_data')
-    if not os.path.exists(data_path):
-        os.makedirs(data_path)
-    
-    # Save arrays for later analysis in other formats
-    np.save(os.path.join(data_path, 'mesh_positions.npy'), pos)
-    np.save(os.path.join(data_path, 'mesh_faces.npy'), faces)
-    np.save(os.path.join(data_path, 'ground_truth.npy'), gs_stress)
-    np.save(os.path.join(data_path, 'prediction.npy'), pred_stress)
-    np.save(os.path.join(data_path, 'error.npy'), error_stress)
-    np.save(os.path.join(data_path, 'relative_error.npy'), relative_error_stress)
-    
-    # Save as CSV format for easy import to other software
-    np.savetxt(os.path.join(data_path, 'results.csv'), 
-               np.column_stack((pos, gs_stress, pred_stress, error_stress, relative_error_stress)),
-               delimiter=',', 
-               header='x,y,ground_truth,prediction,error,relative_error')
-    
-    plot_path = os.path.join(path, name + '_comparison.png')
-    plt.savefig(plot_path)
-    plt.show()
-
-file_path = os.path.join(dataset_dir, 'processed_data.pt')
-dataset_full_timesteps = torch.load(gnn_data_path, weights_only=False)
-dataset = torch.load(file_path, weights_only=False)
-if not isinstance(dataset, list):
-    dataset = [dataset]
-dataset = dataset[:1]
-
-print(dataset)
-len(dataset_full_timesteps)/5
+        # Override/add specific parameters for final training
+        best_params.update({
+            'model_type': 'fclga',
+            'epochs': args.final_epochs,
+            'opt_scheduler': 'step',
+            'opt_restart': 0,
+            'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+            'shuffle': True,
+            'save_velo_val': True,
+            'save_best_model': True,
+        })
+        
+        best_args = objectview(best_params)
+        
+        # Load dataset and create splits (same as optimization)
+        dataset = torch.load(file_path, weights_only=False)
+        total_size = len(dataset)
+        train_size = int(total_size * 0.7)
+        val_size = int(total_size * 0.15)
+        test_size = total_size - train_size - val_size
+        
+        torch.manual_seed(42)
+        random.seed(42)
+        np.random.seed(42)
+        
+        if best_args.shuffle:
+            random.shuffle(dataset)
+        
+        train_dataset = dataset[:train_size]
+        val_dataset = dataset[train_size:train_size+val_size]
+        test_dataset = dataset[train_size+val_size:]
+        
+        # Update args with actual sizes
+        best_args.train_size = train_size
+        best_args.val_size = val_size
+        best_args.test_size = test_size
+        
+        # Get statistics for normalization (only from training data)
+        stats_list = get_stats(train_dataset)
+        
+        # Train final model
+        print("\nTraining with best hyperparameters:")
+        for key, value in study.best_params.items():
+            print(f"  {key}: {value}")
+        print(f"  epochs: {args.final_epochs}")
+        print("="*80 + "\n")
+        
+        val_losses, losses, velo_val_losses, best_model = train(
+            train_dataset, val_dataset, best_args.device, stats_list, best_args
+        )
+        
+        # Evaluate on test set
+        print("\nEvaluating final model on test set...")
+        final_test_loss, final_test_rmse = evaluate_final_model(
+            test_dataset, best_model, best_args.device, stats_list, best_args, postprocess_dir
+        )
+        
+        print(f"\nFinal Test Loss: {final_test_loss:.5f}")
+        print(f"Final Test RMSE: {final_test_rmse:.5f}")
+        
+        # Save final plots
+        test_losses = [final_test_loss.item()]
+        save_plots(best_args, losses, val_losses, test_losses, postprocess_dir=postprocess_dir)
+        
+        print("="*80)
+        print("FINAL MODEL TRAINING COMPLETE")
+        print("="*80)
 
 def normalize(to_normalize, mean_vec, std_vec):
-    # print(f"Shape of to_normalize before normalization: {to_normalize.shape}")
-    # print(f"Shape of mean_vec: {mean_vec.shape}")
-    # print(f"Shape of std_vec: {std_vec.shape}")
     normalized = (to_normalize - mean_vec) / std_vec
-    # print(f"Shape of normalized: {normalized.shape}")
     return normalized
 
 def unnormalize(to_unnormalize,mean_vec,std_vec):
@@ -1058,143 +773,6 @@ def analyze_node_features(dataset):
     
     print("=================================\n")
 
-# def train(dataset, device, stats_list, args):
-#     '''
-#     Performs a training loop on the dataset for MeshGraphNets. Also calls
-#     test and validation functions.
-#     '''
-
-#     df = pd.DataFrame(columns=['epoch','train_loss','test_loss', 'velo_val_loss'])
-
-#     # Define the model name for saving
-#     model_name = 'model_nl' + str(args.num_layers) + '_bs' + str(args.batch_size) + \
-#                  '_hd' + str(args.hidden_dim) + '_ep' + str(args.epochs) + '_wd' + str(args.weight_decay) + \
-#                  '_lr' + str(args.lr) + '_shuff_' + str(args.shuffle) + '_tr' + str(args.train_size) + '_te' + str(args.test_size)
-
-#     # torch_geometric DataLoaders are used for handling the data of lists of graphs
-#     loader = DataLoader(dataset[:args.train_size], batch_size=args.batch_size, shuffle=False)
-#     test_loader = DataLoader(dataset[args.train_size:], batch_size=args.batch_size, shuffle=False)
-
-#     # The statistics of the data are decomposed
-#     [mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y] = stats_list
-#     (mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y) = (
-#         mean_vec_x.to(device), std_vec_x.to(device), mean_vec_edge.to(device), std_vec_edge.to(device), mean_vec_y.to(device), std_vec_y.to(device))
-
-#     # Build model
-#     num_node_features = dataset[0].x.shape[1]
-#     num_edge_features = dataset[0].edge_attr.shape[1]
-#     num_classes = 1
-
-#     model = MeshGraphNet(num_node_features, num_edge_features, args.hidden_dim, num_classes, args).to(device)
-#     scheduler, opt = build_optimizer(args, model.parameters())
-
-#     # Train
-#     losses = []
-#     test_losses = []
-#     velo_val_losses = []
-#     best_test_loss = np.inf
-#     best_model = None
-
-#     for epoch in trange(args.epochs, desc="Training", unit="Epochs"):
-#         total_loss = 0
-#         model.train()
-#         num_loops = 0
-#         for batch in loader:
-#             batch = batch.to(device)
-#             opt.zero_grad()  # zero gradients each time
-#             pred = model(batch, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
-#             loss = model.loss(pred, batch, mean_vec_y, std_vec_y)
-#             loss.backward()  # backpropagate loss
-#             opt.step()
-#             total_loss += loss.item()
-#             num_loops += 1
-#         total_loss /= num_loops
-#         losses.append(total_loss)
-
-#         # Every tenth epoch, calculate acceleration test loss and velocity validation loss
-#         if epoch % 10 == 0:
-#             if args.save_velo_val:
-#                 # Save velocity evaluation
-#                 test_loss, velo_val_rmse = test(test_loader, device, model, mean_vec_x, std_vec_x, mean_vec_edge,
-#                                                 std_vec_edge, mean_vec_y, std_vec_y, args.save_velo_val)
-#                 velo_val_losses.append(velo_val_rmse.item())
-#             else:
-#                 test_loss, _ = test(test_loader, device, model, mean_vec_x, std_vec_x, mean_vec_edge,
-#                                     std_vec_edge, mean_vec_y, std_vec_y, args.save_velo_val)
-
-#             test_losses.append(test_loss.item())
-
-#             # Saving model
-#             if not os.path.isdir(args.checkpoint_dir):
-#                 os.mkdir(args.checkpoint_dir)
-
-#             PATH = os.path.join(args.checkpoint_dir, model_name + '.csv')
-#             df.to_csv(PATH, index=False)
-
-#             # Save the model if the current one is better than the previous best
-#             if test_loss < best_test_loss:
-#                 best_test_loss = test_loss
-#                 best_model = copy.deepcopy(model)
-
-#         else:
-#             # If not the tenth epoch, append the previously calculated loss to the
-#             # list in order to be able to plot it on the same plot as the training losses
-#             if args.save_velo_val:
-#                 test_losses.append(test_losses[-1])
-#                 velo_val_losses.append(velo_val_losses[-1])
-
-#         new_row = pd.DataFrame({'epoch': [epoch], 'train_loss': [losses[-1]], 'test_loss': [test_losses[-1]]})
-#         if args.save_velo_val:
-#             new_row['velo_val_loss'] = velo_val_losses[-1]
-#         df = pd.concat([df, new_row], ignore_index=True)
-
-#         if epoch % 100 == 0:
-#             if args.save_velo_val:
-#                 print("train loss", str(round(total_loss, 2)),
-#                       "test loss", str(round(test_loss.item(), 2)),
-#                       "velo loss", str(round(velo_val_rmse.item(), 5)))
-#             else:
-#                 print("train loss", str(round(total_loss, 2)), "test loss", str(round(test_loss.item(), 2)))
-
-#             if args.save_best_model:
-#                 PATH = os.path.join(args.checkpoint_dir, model_name + '.pt')
-#                 torch.save(best_model.state_dict(), PATH)
-
-#     # Plot comparison between predicted, ground truth, and error for the last step
-#     plot_name = 'x_stress_last_epoch'
-#     visualize(test_loader, best_model, postprocess_dir, plot_name, stats_list, sample_index=0)
-    
-#     return test_losses, losses, velo_val_losses, best_model, best_test_loss, test_loader
-
-def test(loader, device, test_model, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y, is_validation, delta_t=0.01, save_model_preds=False, model_type=None):
-    '''
-    Calculates test set losses and validation set errors.
-    '''
-    loss = 0
-    velo_rmse = 0
-    num_loops = 0
-
-    for data in loader:
-        data = data.to(device)
-        with torch.no_grad():
-            # Calculate the loss for the model given the test set
-            pred = test_model(data, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
-            loss += test_model.loss(pred, data, mean_vec_y, std_vec_y)
-
-            # Calculate validation error if asked to
-            if is_validation:
-                # Unnormalize the predictions and ground truth
-                eval_y = unnormalize(pred, mean_vec_y, std_vec_y)
-                gs_y = data.y
-
-                # Calculate the error
-                error = torch.sum((eval_y - gs_y) ** 2, axis=1)
-                velo_rmse += torch.sqrt(torch.mean(error))
-
-        num_loops += 1
-
-    return loss / num_loops, velo_rmse / num_loops
-
 def train(train_dataset, val_dataset, device, stats_list, args):
     '''
     Performs a training loop on the dataset for MeshGraphNets with proper validation.
@@ -1299,375 +877,237 @@ def train(train_dataset, val_dataset, device, stats_list, args):
     PATH = os.path.join(checkpoint_dir, model_name + '.csv')
     df.to_csv(PATH, index=False)
     
-    # Plot results from final model
-    plot_name = 'final_epoch_results'
+    # Plot results from final model (example prediction on validation set)
+    plot_name = 'validation_set_prediction_example'
     visualize(val_loader, best_model, postprocess_dir, plot_name, stats_list)
     
     return val_losses, losses, velo_val_losses, best_model
-
-
-def benchmark_inference_time(model, test_dataset, device, stats_list, num_runs=100):
-    """
-    Benchmark GNN inference time for fair comparison with FEM simulation time.
-    
-    Args:
-        model: Trained GNN model
-        test_dataset: Test dataset
-        device: Computing device
-        stats_list: Normalization statistics
-        num_runs: Number of inference runs for averaging
-    
-    Returns:
-        dict: Timing results and speedup analysis
-    """
-    print(f"\n{'='*60}")
-    print("INFERENCE TIME BENCHMARK")
-    print(f"{'='*60}")
-    
-    # Get statistics
-    [mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y] = stats_list
-    stats_gpu = [s.to(device) for s in stats_list]
-    
-    # Prepare single sample for inference
-    sample = test_dataset[0].to(device)
-    model.eval()
-    
-    # Warm up GPU
-    with torch.no_grad():
-        for _ in range(10):
-            _ = model(sample, *stats_gpu)
-    
-    # Time GNN inference
-    torch.cuda.synchronize() if device == 'cuda' else None
-    start_time = time.time()
-    
-    with torch.no_grad():
-        for _ in range(num_runs):
-            prediction = model(sample, *stats_gpu)
-            
-    torch.cuda.synchronize() if device == 'cuda' else None
-    end_time = time.time()
-    
-    # Calculate average inference time
-    total_inference_time = end_time - start_time
-    avg_inference_time = total_inference_time / num_runs
-    
-    # Estimate FEM simulation time (you should replace this with actual FEM timing)
-    # These are typical values - you should measure actual FEM times for your meshes
-    estimated_fem_times = {
-        'simple_mesh': 300,      # 5 minutes for simple mesh
-        'medium_mesh': 1800,     # 30 minutes for medium complexity
-        'complex_mesh': 7200,    # 2 hours for complex mesh
-        'your_mesh': 600        # Estimate for your specific mesh - UPDATE THIS
-    }
-    
-    results = {
-        'gnn_inference_time': avg_inference_time,
-        'num_runs': num_runs,
-        'total_time': total_inference_time,
-        'speedup_analysis': {}
-    }
-    
-    print(f"GNN Inference Results:")
-    print(f"  Average inference time: {avg_inference_time:.6f} seconds")
-    print(f"  Total time for {num_runs} runs: {total_inference_time:.3f} seconds")
-    print(f"  Inference frequency: {1/avg_inference_time:.1f} predictions/second")
-    
-    print(f"\nSpeedup Analysis vs FEM:")
-    print(f"{'FEM Type':<15} {'FEM Time (s)':<15} {'Speedup':<15} {'Time Saved':<15}")
-    print("-" * 65)
-    
-    for fem_type, fem_time in estimated_fem_times.items():
-        speedup = fem_time / avg_inference_time
-        time_saved = fem_time - avg_inference_time
-        results['speedup_analysis'][fem_type] = {
-            'fem_time': fem_time,
-            'speedup': speedup,
-            'time_saved': time_saved
-        }
-        print(f"{fem_type:<15} {fem_time:<15.1f} {speedup:<15.0f}× {time_saved:<15.1f}s")
-    
-    # Break-even analysis for training cost
-    training_time_estimate = 3600  # 1 hour estimate - update with your actual training time
-    print(f"\nBreak-even Analysis:")
-    print(f"Training time estimate: {training_time_estimate:.0f} seconds")
-    
-    for fem_type, analysis in results['speedup_analysis'].items():
-        time_saved_per_pred = analysis['time_saved']
-        break_even_predictions = training_time_estimate / time_saved_per_pred if time_saved_per_pred > 0 else float('inf')
-        print(f"  {fem_type}: Break-even after {break_even_predictions:.0f} predictions")
-    
-    return results
-
-def save_speedup_analysis(results, results_folder):
-    """Save speedup analysis results to files."""
-    import json
-    
-    # Save as JSON
-    json_path = os.path.join(results_folder, 'speedup_analysis.json')
-    with open(json_path, 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    # Create visualization
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    
-    # Plot 1: Speedup comparison
-    fem_types = list(results['speedup_analysis'].keys())
-    speedups = [results['speedup_analysis'][ft]['speedup'] for ft in fem_types]
-    
-    bars = ax1.bar(fem_types, speedups, color='skyblue', alpha=0.7, edgecolor='black')
-    ax1.set_ylabel('Speedup Factor (×)')
-    ax1.set_title('GNN vs FEM Speedup')
-    ax1.set_yscale('log')
-    ax1.grid(True, alpha=0.3, axis='y')
-    
-    # Add value labels on bars
-    for bar, speedup in zip(bars, speedups):
-        ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(), 
-                f'{speedup:.0f}×', ha='center', va='bottom')
-    
-    # Plot 2: Time comparison
-    fem_times = [results['speedup_analysis'][ft]['fem_time'] for ft in fem_types]
-    gnn_time = results['gnn_inference_time']
-    
-    x = range(len(fem_types))
-    ax2.bar([i - 0.2 for i in x], fem_times, 0.4, label='FEM', color='red', alpha=0.7)
-    ax2.bar([i + 0.2 for i in x], [gnn_time] * len(fem_types), 0.4, 
-           label='GNN', color='blue', alpha=0.7)
-    
-    ax2.set_ylabel('Time (seconds)')
-    ax2.set_title('Absolute Time Comparison')
-    ax2.set_yscale('log')
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(fem_types)
-    ax2.legend()
-    ax2.grid(True, alpha=0.3, axis='y')
-    
-    plt.tight_layout()
-    plot_path = os.path.join(results_folder, 'speedup_analysis.png')
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    print(f"\nSpeedup analysis saved to:")
-    print(f"  JSON: {json_path}")
-    print(f"  Plot: {plot_path}")
-
-
-def save_plots(args, train_losses, val_losses, test_losses=None, velo_val_losses=None):
-    model_name = 'model_nl' + str(args.num_layers) + '_bs' + str(args.batch_size) + \
-                 '_hd' + str(args.hidden_dim) + '_ep' + str(args.epochs) + '_wd' + str(args.weight_decay) + \
-                 '_lr' + str(args.lr) + '_shuff_' + str(args.shuffle) + '_tr' + str(args.train_size) + '_te' + str(args.test_size)
-
-    if not os.path.isdir(postprocess_dir):
-        os.mkdir(postprocess_dir)
-
-    PATH = os.path.join(postprocess_dir, model_name + '.pdf')
-
-    f = plt.figure(figsize=(10, 6))
-    plt.title('Losses Plot')
-    plt.plot(train_losses, label="Training loss")
-    plt.plot(val_losses, label="Validation loss")
-    
-    if test_losses is not None and len(test_losses) > 0:
-        # If we only have final test loss, show it as a point
-        if len(test_losses) == 1:
-            plt.scatter(len(train_losses)-1, test_losses[0], color='green', label="Final Test loss", s=100, zorder=5)
-        else:
-            plt.plot(test_losses, label="Test loss")
-    
-    # Removed the velocity loss plotting code
-    
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(PATH, bbox_inches='tight')
-    plt.show()
-    print(f"Plot saved at: {PATH}")
-
-def evaluate_final_model(test_dataset, best_model, device, stats_list, args):
-    """
-    Evaluate the final model on the test set after training is complete.
-    """
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-    
-    [mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y] = stats_list
-    (mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y) = (
-        mean_vec_x.to(device), std_vec_x.to(device), mean_vec_edge.to(device), 
-        std_vec_edge.to(device), mean_vec_y.to(device), std_vec_y.to(device))
-    
-    test_loss, test_rmse = test(test_loader, device, best_model, mean_vec_x, std_vec_x, 
-                              mean_vec_edge, std_vec_edge, mean_vec_y, std_vec_y, True)
-    
-    print(f"Final Test Loss: {test_loss:.5f}")
-    print(f"Final Test RMSE: {test_rmse:.5f}")
-    
-    # Generate visualization on test set
-    plot_name = 'test_set_final_results'
-    visualize(test_loader, best_model, postprocess_dir, plot_name, stats_list)
-    
-    return test_loss, test_rmse
 
 class objectview(object):
     def __init__(self, d):
         self.__dict__ = d
 
-# for args in [
-#         {
-#          'model_type': 'meshgraphnet',
-#          'num_layers': 24,
-#          'batch_size': 8,   #originally 16
-#          'hidden_dim': 64,
-#          'epochs': 2700,      # originally 5000
-#          'opt': 'adam',
-#          'opt_scheduler': 'cosine',
-#          'opt_decay_step': 75,    # Add this parameter
-#          'opt_decay_rate': 0.83,    # Add this parameter
-#          'opt_restart': 0,
-#          'weight_decay': 1.17e-6,
-#          'lr': 0.0005359,
-#          'train_size': 400,  #originally 45
-#          'test_size': 100,   #originally 10
-#          'device':'cuda',
-#          'shuffle': True,
-#          'save_velo_val': True,
-#          'save_best_model': True,
-#          'checkpoint_dir': './best_models/',
-#          'postprocess_dir': './2d_loss_plots/'},
-#     ]:
-#         args = objectview(args)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Train FCLGA GraphTransformer for structural mechanics prediction',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  # Basic training with default parameters
+  python src/training/fclga_train_model.py --epochs 500
+  
+  # Custom hyperparameters
+  python src/training/fclga_train_model.py --epochs 1000 --num_layers 6 --hidden_dim 64 --lr 0.001
+  
+  # Full specification
+  python src/training/fclga_train_model.py \\
+      --num_layers 6 --batch_size 4 --hidden_dim 48 --dropout_rate 0.25 \\
+      --attention_freq 3 --epochs 500 --lr 0.000824 --weight_decay 1.07e-05
+  
+  # Using GPU
+  python src/training/fclga_train_model.py --epochs 500 --device cuda
 
-for args in [
-        {
-        'model_type': 'meshgraphnet',
-        'num_layers': 6,  # Updated from trial.params to optimal value
-        'batch_size': 4,  # Updated from trial.params to optimal value
-        'hidden_dim': 48,  # Updated from trial.params to optimal value
-        'dropout_rate': 0.253,  # Updated from trial.params to optimal value
-        'attention_freq': 3,  # Updated from trial.params to optimal value
-        'epochs': 500,
-        'opt': 'adam',  # Updated from trial.params to optimal value
-        'opt_scheduler': 'step',
-        'opt_decay_step': 46,  # Updated from trial.params to optimal value
-        'opt_decay_rate': 0.668,  # Updated from trial.params to optimal value
-        'opt_restart': 0,
-        'weight_decay': 1.07e-05,  # Updated from trial.params to optimal value
-        'lr': 8.24e-04,  # Updated from trial.params to optimal value
-        'train_size': 400,  #originally 45
-        'test_size': 100,   #originally 10
-        'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'shuffle': True,
-        'save_velo_val': True,
-        'save_best_model': True,
-        'checkpoint_dir': './best_models/',
-        'postprocess_dir': './2d_loss_plots/'},
-    ]:
-        args = objectview(args)
-
-
-#To ensure reproducibility the best we can, here we control the sources of
-#randomness by seeding the various random number generators used in this Colab
-#For more information, see: https://pytorch.org/docs/stable/notes/randomness.html
-torch.manual_seed(5)  #Torch
-random.seed(5)        #Python
-np.random.seed(5)     #NumPy
-
-dataset = torch.load(file_path, weights_only=False)[:(args.train_size+args.test_size)]
-
-sample_data = dataset[0]  # Get first graph in dataset
-
-print("Node feature tensor shape:", sample_data.x.shape)
-print("Number of nodes:", sample_data.x.shape[0])
-print("Node feature dimension:", sample_data.x.shape[1])
-
-# Print statistics
-print("Node features min/max/mean:", 
-      torch.min(sample_data.x).item(), 
-      torch.max(sample_data.x).item(),
-      torch.mean(sample_data.x).item())
-
-# Examine the first few nodes
-print("First 3 node features:")
-for i in range(min(3, sample_data.x.shape[0])):
-    print(f"Node {i}:", sample_data.x[i])
-
-# If you suspect there's a specific structure (like first N features are position, next M are one-hot encoded type)
-# Try to verify by checking patterns:
-print("\nExample node types (if one-hot encoded):")
-if sample_data.x.shape[1] > 3:  # Assuming at least a few features
-    # Look at potential one-hot encoded section (often in latter part of feature vector)
-    potential_onehot = sample_data.x[:5, 2:]  # First 5 nodes, features from 3rd onward
-    print(potential_onehot)
+Default values are optimized for the open-hole plate problem.
+For different geometries, consider adjusting hyperparameters.
+        '''
+    )
     
-    # Check if any rows sum to 1 (typical of one-hot encoding)
-    row_sums = torch.sum(potential_onehot, dim=1)
-    print("Sum of potential one-hot section:", row_sums)
+    # Model Architecture
+    parser.add_argument('--num_layers', type=int, default=6,
+                        help='Number of message passing layers (default: 6)')
+    parser.add_argument('--hidden_dim', type=int, default=48,
+                        help='Hidden dimension size (default: 48)')
+    parser.add_argument('--dropout_rate', type=float, default=0.253,
+                        help='Dropout rate (default: 0.253)')
+    parser.add_argument('--attention_freq', type=int, default=3,
+                        help='Global attention frequency - apply every N layers (default: 3)')
+    
+    # Training Parameters
+    parser.add_argument('--epochs', type=int, default=500,
+                        help='Number of training epochs (default: 500)')
+    parser.add_argument('--batch_size', type=int, default=4,
+                        help='Batch size (default: 4)')
+    parser.add_argument('--lr', type=float, default=8.24e-04,
+                        help='Learning rate (default: 8.24e-04)')
+    parser.add_argument('--weight_decay', type=float, default=1.07e-05,
+                        help='Weight decay for optimizer (default: 1.07e-05)')
+    
+    # Optimizer Settings
+    parser.add_argument('--opt', type=str, default='adam', choices=['adam', 'rmsprop', 'sgd'],
+                        help='Optimizer type (default: adam)')
+    parser.add_argument('--opt_scheduler', type=str, default='step', choices=['step', 'cosine', 'none'],
+                        help='Learning rate scheduler (default: step)')
+    parser.add_argument('--opt_decay_step', type=int, default=46,
+                        help='Decay step for step scheduler (default: 46)')
+    parser.add_argument('--opt_decay_rate', type=float, default=0.668,
+                        help='Decay rate for step scheduler (default: 0.668)')
+    
+    # Dataset Parameters
+    parser.add_argument('--train_size', type=int, default=400,
+                        help='Number of training samples (default: 400)')
+    parser.add_argument('--test_size', type=int, default=100,
+                        help='Number of test samples (default: 100)')
+    parser.add_argument('--shuffle', action='store_true', default=True,
+                        help='Shuffle dataset (default: True)')
+    parser.add_argument('--no_shuffle', dest='shuffle', action='store_false',
+                        help='Do not shuffle dataset')
+    
+    # Device and Output
+    parser.add_argument('--device', type=str, default='auto', choices=['auto', 'cuda', 'cpu'],
+                        help='Device to use (default: auto - uses CUDA if available)')
+    parser.add_argument('--save_best_model', action='store_true', default=True,
+                        help='Save best model during training (default: True)')
+    parser.add_argument('--save_velo_val', action='store_true', default=True,
+                        help='Save velocity validation metrics (default: True)')
+    
+    # Hyperparameter Optimization
+    parser.add_argument('--optimize', action='store_true',
+                        help='Run Optuna hyperparameter optimization instead of single training')
+    parser.add_argument('--optuna_trials', type=int, default=10,
+                        help='Number of Optuna optimization trials (default: 10)')
+    parser.add_argument('--final_epochs', type=int, default=None,
+                        help='After optimization, train final model with best hyperparameters for this many epochs (default: None - no final training)')
+    
+    args = parser.parse_args()
+    
+    # If optimization requested, run Optuna and exit
+    if args.optimize:
+        try:
+            import optuna
+        except ImportError:
+            print("ERROR: Optuna not installed. Install with: pip install optuna")
+            print("Falling back to single training run...")
+        else:
+            run_optuna_optimization(args)
+            exit(0)
+    
+    # Convert args to dict and set additional parameters
+    args_dict = vars(args).copy()
+    args_dict['model_type'] = 'fclga'
+    args_dict['opt_restart'] = 0
+    
+    # Handle device auto-selection
+    if args.device == 'auto':
+        args_dict['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+    else:
+        args_dict['device'] = args.device
+    
+    # Setup directories first
+    results_folder = create_results_folder()
+    root_dir = os.getcwd()
+    dataset_dir = os.path.join(root_dir, 'datasets')
+    checkpoint_dir = os.path.join(results_folder, 'best_models')
+    postprocess_dir = os.path.join(results_folder, 'plots')
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(postprocess_dir, exist_ok=True)
+    
+    # Set directory paths in args
+    args_dict['checkpoint_dir'] = checkpoint_dir
+    args_dict['postprocess_dir'] = postprocess_dir
+    
+    args = objectview(args_dict)
+    
+    print("="*80)
+    print("FCLGA GraphTransformer Training")
+    print("="*80)
+    print(f"Model Configuration:")
+    print(f"  - Layers: {args.num_layers}")
+    print(f"  - Hidden dim: {args.hidden_dim}")
+    print(f"  - Attention frequency: {args.attention_freq}")
+    print(f"  - Dropout: {args.dropout_rate}")
+    print(f"\nTraining Configuration:")
+    print(f"  - Epochs: {args.epochs}")
+    print(f"  - Batch size: {args.batch_size}")
+    print(f"  - Learning rate: {args.lr}")
+    print(f"  - Weight decay: {args.weight_decay}")
+    print(f"  - Optimizer: {args.opt}")
+    print(f"  - Device: {args.device}")
+    print(f"\nDataset Configuration:")
+    print(f"  - Training samples: {args.train_size}")
+    print(f"  - Test samples: {args.test_size}")
+    print(f"  - Shuffle: {args.shuffle}")
+    print("="*80)
+    print()
 
-analyze_node_features(dataset)
+    # Initialize directories
+    results_folder = create_results_folder()
+    root_dir = os.getcwd()
+    dataset_dir = os.path.join(root_dir, 'datasets')
+    checkpoint_dir = os.path.join(results_folder, 'best_models')
+    postprocess_dir = os.path.join(results_folder, 'plots')
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(postprocess_dir, exist_ok=True)
+    
+    # Update args with directory paths
+    args.checkpoint_dir = checkpoint_dir
+    args.postprocess_dir = postprocess_dir
+    
+    file_path = os.path.join(dataset_dir, 'processed_data.pt')
 
-# Calculate split sizes
-total_size = len(dataset)
-train_size = int(total_size * 0.7)  # 70% training
-val_size = int(total_size * 0.15)   # 15% validation 
-test_size = total_size - train_size - val_size  # 15% testing
+    torch.manual_seed(5)  #Torch
+    random.seed(5)        #Python
+    np.random.seed(5)     #NumPy
 
-print(f"Dataset size: {total_size}")
-print(f"Training set size: {train_size}")
-print(f"Validation set size: {val_size}")
-print(f"Test set size: {test_size}")
+    dataset = torch.load(file_path, weights_only=False)[:(args.train_size+args.test_size)]
 
-# Create the splits
-if args.shuffle:
-    random.shuffle(dataset)
+    sample_data = dataset[0]  # Get first graph in dataset
 
-train_dataset = dataset[:train_size]
-val_dataset = dataset[train_size:train_size+val_size]
-test_dataset = dataset[train_size+val_size:]
-
-# Update args
-args.train_size = train_size
-args.val_size = val_size
-args.test_size = test_size
-
-# Get statistics for normalization
-stats_list = get_stats(dataset)
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-args.device = device
-print(device)
-
-
-# Add after your existing dataset preparation but before training
-# print("Starting timing benchmark...")
-
-# # Run timing benchmark
-# timing_results = benchmark_attention_frequencies(
-#     dataset=dataset, 
-#     device=device, 
-#     stats_list=stats_list, 
-#     base_args=args,
-#     num_epochs=3  # Use fewer epochs for quick testing
-# )
-
-# # Analyze and save results
-# timing_df = analyze_timing_results(timing_results)
-# save_timing_results(timing_df, results_folder)
-
-# Now continue with your regular training...
-val_losses, losses, velo_val_losses, best_model = train(
-    train_dataset, val_dataset, device, stats_list, args
-)
-
-# val_losses, losses, velo_val_losses, best_model = train(
-#     train_dataset, val_dataset, device, stats_list, args
-# )
-
-# # Final evaluation on test set
-# final_test_loss, final_test_rmse = evaluate_final_model(test_dataset, best_model, device, stats_list, args)
-# print(f"Final Test Loss: {final_test_loss:.5f}")
-# print(f"Final Test RMSE: {final_test_rmse:.5f}")
-
-# # Plot losses
-# test_losses = [final_test_loss.item()]  # Just use the final test loss
-# save_plots(args, losses, val_losses, test_losses)
+    print("Node feature tensor shape:", sample_data.x.shape)
+    print("Number of nodes:", sample_data.x.shape[0])
+    print("Node feature dimension:", sample_data.x.shape[1])
+    
+    # Print statistics
+    print("Node features min/max/mean:", 
+          torch.min(sample_data.x).item(), 
+          torch.max(sample_data.x).item(),
+          torch.mean(sample_data.x).item())
+    print("First 3 node features:")
+    for i in range(min(3, sample_data.x.shape[0])):
+        print(f"Node {i}:", sample_data.x[i])
+    
+    print("\nExample node types (if one-hot encoded):")
+    if sample_data.x.shape[1] > 3:  # Assuming at least a few features
+        # Look at potential one-hot encoded section (often in latter part of feature vector)
+        potential_onehot = sample_data.x[:5, 2:]  # First 5 nodes, features from 3rd onward
+        print(potential_onehot)
+        
+        # Check if any rows sum to 1 (typical of one-hot encoding)
+        row_sums = torch.sum(potential_onehot, dim=1)
+        print("Sum of potential one-hot section:", row_sums)
+    
+    analyze_node_features(dataset)
+    
+    # Calculate split sizes
+    total_size = len(dataset)
+    train_size = int(total_size * 0.7)  # 70% training
+    val_size = int(total_size * 0.15)   # 15% validation 
+    test_size = total_size - train_size - val_size  # 15% testing
+    
+    print(f"Dataset size: {total_size}")
+    print(f"Training set size: {train_size}")
+    print(f"Validation set size: {val_size}")
+    print(f"Test set size: {test_size}")
+    
+    # Create the splits
+    if args.shuffle:
+        random.shuffle(dataset)
+    
+    train_dataset = dataset[:train_size]
+    val_dataset = dataset[train_size:train_size+val_size]
+    test_dataset = dataset[train_size+val_size:]
+    
+    # Update args
+    args.train_size = train_size
+    args.val_size = val_size
+    args.test_size = test_size
+    
+    # Get statistics for normalization
+    stats_list = get_stats(dataset)
+    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    args.device = device
+    print(device)
+    
+    val_losses, losses, velo_val_losses, best_model = train(
+        train_dataset, val_dataset, device, stats_list, args
+    )

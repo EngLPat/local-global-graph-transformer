@@ -1,11 +1,11 @@
 """
 FCLGA GraphTransformer - Hyperparameters Configuration
 
-Authors: Luca Patrignani, Silvestre T. Pinho
-Institution: Imperial College London
-
 Centralized configuration for all hyperparameters and settings.
 Users can modify these values to adapt the pipeline to their needs.
+
+Authors: Luca Patrignani, Silvestre T. Pinho
+Institution: Imperial College London
 """
 
 import torch
@@ -28,7 +28,7 @@ class TrainingConfig:
     """Training hyperparameters"""
     
     # Training duration
-    EPOCHS = 500
+    EPOCHS = 100
     
     # Batch settings
     BATCH_SIZE = 4
@@ -110,7 +110,7 @@ class OptimizationConfig:
     """Hyperparameter optimization settings (for Optuna)"""
     
     # Optuna study settings
-    N_TRIALS = 100
+    N_TRIALS = 10
     TIMEOUT = 3600  # seconds
     
     # Search space
