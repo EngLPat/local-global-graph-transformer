@@ -80,6 +80,9 @@ from src.utils.benchmark_utils import (
 # Import visualization functions
 from src.utils.visualization import visualize, plot_results, save_plots
 
+# Import model components
+from src.models import FCLGA_GraphTransformer, GlobalAttention, ProcessorLayer
+
 # Module-level initialization moved to main block
 # print(dataset)  # Moved to main
 # len(dataset_full_timesteps)/5  # Moved to main
@@ -95,21 +98,20 @@ def run_optuna_optimization(args):
     global checkpoint_dir, postprocess_dir
     results_folder = create_results_folder()
     checkpoint_dir = os.path.join(results_folder, 'best_models')
-    postprocess_dir = os.path.join(results_folder, 'plots')
+    postprocess_dir = os.path.join(results_folder, 'training_results')
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(postprocess_dir, exist_ok=True)
     
     print("="*80)
     print("OPTUNA HYPERPARAMETER OPTIMIZATION")
     print("="*80)
+    print(f"Material type: {args.material_type}")
     print(f"Trials: {args.optuna_trials}")
     print(f"Epochs per trial: {args.epochs}")
     print("="*80)
     
     # Load dataset once for all trials
-    file_path = os.path.join(os.getcwd(), 'datasets', 'processed_data.pt')
-    if not os.path.exists(file_path):
-        file_path = os.path.join(os.getcwd(), 'data', 'processed', 'datasets', 'processed_data.pt')
+    file_path = os.path.join(os.getcwd(), 'data', 'processed', args.material_type, 'datasets', 'processed_data.pt')
     
     def objective(trial):
         # Set seeds for reproducibility within each trial (LEGACY LOGIC)
@@ -118,14 +120,7 @@ def run_optuna_optimization(args):
         np.random.seed(42 + trial.number)
         
         num_layers = trial.suggest_int('num_layers', 4, 8)
-
-        # LEGACY: Conditional attention frequency bounds based on num_layers
-        if num_layers <= 4:
-            attention_freq = num_layers  # Only at the end for very small models
-        elif num_layers <= 6:
-            attention_freq = trial.suggest_int('attention_freq', 3, num_layers)  # Every 3+ layers
-        else:
-            attention_freq = trial.suggest_int('attention_freq', 4, 8)  # Every 4-8 layers
+        attention_freq = trial.suggest_int('attention_freq', 2, num_layers)  # Always optimize
 
         trial_args = {
             'model_type': 'fclga',
@@ -133,7 +128,7 @@ def run_optuna_optimization(args):
             'batch_size': trial.suggest_categorical('batch_size', [4, 8, 12]),
             'hidden_dim': trial.suggest_categorical('hidden_dim', [48, 64, 96, 128]),
             'dropout_rate': trial.suggest_float('dropout_rate', 0.1, 0.3),
-            'attention_freq': attention_freq,  # Use the conditional logic
+            'attention_freq': attention_freq,
             'epochs': args.epochs,
             'opt': trial.suggest_categorical('opt', ['adam', 'rmsprop']),
             'opt_scheduler': 'step',
@@ -211,27 +206,48 @@ def run_optuna_optimization(args):
     for key, value in study.best_params.items():
         print(f"  {key}: {value}")
     
-    # Save study
-    results_dir = Path('results')
-    results_dir.mkdir(exist_ok=True)
+    # Create organized results directory inside training run folder
+    opt_results_dir = Path(results_folder) / 'hyperparameter_optimization_results'
+    opt_results_dir.mkdir(exist_ok=True)
     
-    study_path = results_dir / 'optuna_study.pkl'
+    # Save study pickle file
+    study_path = opt_results_dir / 'optuna_study.pkl'
     with open(study_path, 'wb') as f:
         pickle.dump(study, f)
     print(f"\n✓ Study saved to {study_path}")
     
+    # Save best hyperparameters as readable text file
+    best_params_path = opt_results_dir / 'best_hyperparameters.txt'
+    with open(best_params_path, 'w') as f:
+        f.write("="*80 + "\n")
+        f.write("HYPERPARAMETER OPTIMIZATION RESULTS\n")
+        f.write("="*80 + "\n\n")
+        f.write(f"Number of trials: {args.optuna_trials}\n")
+        f.write(f"Epochs per trial: {args.epochs}\n")
+        f.write(f"Best trial: {study.best_trial.number}\n")
+        f.write(f"Best validation loss: {study.best_value:.6f}\n\n")
+        f.write("Best hyperparameters:\n")
+        f.write("-" * 40 + "\n")
+        for key, value in study.best_params.items():
+            f.write(f"  {key:20s} : {value}\n")
+        f.write("\n" + "="*80 + "\n")
+    print(f"✓ Best hyperparameters saved to {best_params_path}")
+    
+    # Save best hyperparameters as JSON for automated loading by test script
+    best_params_json = opt_results_dir / 'best_hyperparameters.json'
+    with open(best_params_json, 'w') as f:
+        json.dump(study.best_params, f, indent=2)
+    print(f"✓ Machine-readable hyperparameters saved to {best_params_json}")
+    
     # Generate visualization plots
     try:
-        viz_dir = results_dir / 'optuna_visualizations'
-        viz_dir.mkdir(exist_ok=True)
-        
         fig1 = plot_optimization_history(study)
-        fig1.write_image(str(viz_dir / 'optimization_history.png'))
+        fig1.write_image(str(opt_results_dir / 'optimization_history.png'))
         
         fig2 = plot_param_importances(study)
-        fig2.write_image(str(viz_dir / 'param_importances.png'))
+        fig2.write_image(str(opt_results_dir / 'param_importances.png'))
         
-        print(f"✓ Visualizations saved to {viz_dir}/")
+        print(f"✓ Visualizations saved to {opt_results_dir}/")
     except Exception as e:
         print(f"⚠ Could not generate plots: {e}")
     
@@ -319,12 +335,25 @@ def run_optuna_optimization(args):
         print(f"\nFinal Test Loss: {final_test_loss:.5f}")
         print(f"Final Test RMSE: {final_test_rmse:.5f}")
         
+        # Save final best model
+        model_name = 'model_nl' + str(best_args.num_layers) + '_bs' + str(best_args.batch_size) + \
+                     '_hd' + str(best_args.hidden_dim) + '_ep' + str(best_args.epochs) + \
+                     '_wd' + str(best_args.weight_decay) + '_lr' + str(best_args.lr) + \
+                     '_shuff_' + str(best_args.shuffle) + '_tr' + str(best_args.train_size) + \
+                     '_te' + str(best_args.test_size)
+        model_path = os.path.join(checkpoint_dir, model_name + '_FINAL.pt')
+        torch.save(best_model.state_dict(), model_path)
+        print(f"\n✓ Final model saved to: {model_path}")
+        
         # Save final plots
         test_losses = [final_test_loss.item()]
         save_plots(best_args, losses, val_losses, test_losses, postprocess_dir=postprocess_dir)
         
         print("="*80)
         print("FINAL MODEL TRAINING COMPLETE")
+        print(f"Results saved in: {results_folder}")
+        print(f"  - Model: {checkpoint_dir}")
+        print(f"  - Training results: {postprocess_dir}")
         print("="*80)
 
 def normalize(to_normalize, mean_vec, std_vec):
@@ -397,311 +426,6 @@ def get_stats(data_list):
 
     return mean_std_list
 
-class GlobalAttention(torch.nn.Module):
-    def __init__(self, hidden_dim):
-        super().__init__()
-        self.query = Linear(hidden_dim, hidden_dim)
-        self.key = Linear(hidden_dim, hidden_dim)
-        self.value = Linear(hidden_dim, hidden_dim)
-        self.scale = hidden_dim ** -0.5
-        
-    def forward(self, x, batch=None):
-        # If batch is None, treat all nodes as one graph
-        if batch is None:
-            batch = torch.zeros(x.size(0), device=x.device, dtype=torch.long)
-            
-        query = self.query(x)
-        key = self.key(x)
-        value = self.value(x)
-        
-        # Global attention mechanism
-        attention_logits = torch.matmul(query, key.transpose(-2, -1)) * self.scale
-        attention_weights = torch.softmax(attention_logits, dim=-1)
-        return torch.matmul(attention_weights, value)
-
-class MeshGraphNet(torch.nn.Module):
-    def __init__(self, input_dim_node, input_dim_edge, hidden_dim, output_dim, args, emb=False):
-        super(MeshGraphNet, self).__init__()
-        """
-        MeshGraphNet model. This model is built upon Deepmind's 2021 paper.
-        This model consists of three parts: (1) Preprocessing: encoder (2) Processor
-        (3) postproccessing: decoder. Encoder has an edge and node decoders respectively.
-        Processor has two processors for edge and node respectively. Note that edge attributes have to be
-        updated first. Decoder is only for nodes.
-
-        Input_dim: dynamic variables + node_type + node_position
-        Hidden_dim: 128 in deepmind's paper
-        Output_dim: dynamic variables: velocity changes (1)
-
-        """
-        self.use_attention = True
-        self.num_layers = args.num_layers
-        self.hidden_dim = hidden_dim  # ADD THIS LINE - store hidden_dim as instance variable
-        self.dropout_rate = getattr(args, 'dropout_rate', 0.38)  # Use args.dropout_rate if available
-        self.operation_count = 0  # Add operation counter
-        self.attention_freq = getattr(args, 'attention_freq', 
-                                    max(1, self.num_layers // 2) if self.num_layers <= 8 else 8)
-
-        # Add skip connection projection
-        self.skip_projection = Linear(hidden_dim, hidden_dim)
-
-        # encoder convert raw inputs into latent embeddings
-        # self.node_encoder = Sequential(Linear(input_dim_node , hidden_dim),
-        #                       ReLU(),
-        #                       Linear( hidden_dim, hidden_dim),
-        #                       LayerNorm(hidden_dim))
-        self.node_encoder = Sequential(
-            Linear(input_dim_node, hidden_dim),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim, hidden_dim),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim, hidden_dim),
-            LayerNorm(hidden_dim)
-        )
-        # self.edge_encoder = Sequential(Linear( input_dim_edge , hidden_dim),
-        #                       ReLU(),
-        #                       Linear( hidden_dim, hidden_dim),
-        #                       LayerNorm(hidden_dim)
-        #                       )
-        self.edge_encoder = Sequential(
-            Linear(input_dim_edge, hidden_dim),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim, hidden_dim),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim, hidden_dim),
-            LayerNorm(hidden_dim)
-        )
-
-        self.processor = nn.ModuleList()
-        assert (self.num_layers >= 1), 'Number of message passing layers is not >=1'
-
-        self.global_attention = GlobalAttention(hidden_dim)
-
-        processor_layer=self.build_processor_model()
-        for _ in range(self.num_layers):
-            self.processor.append(processor_layer(hidden_dim,hidden_dim))
-
-
-        # decoder: only for node embeddings
-        # self.decoder = Sequential(Linear( hidden_dim , hidden_dim),
-        #                       ReLU(),
-        #                       Linear( hidden_dim, output_dim)
-        #                       )
-        self.decoder = Sequential(
-            Linear(hidden_dim, hidden_dim*2),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim*2, hidden_dim),
-            PReLU(),
-            Dropout(self.dropout_rate),
-            Linear(hidden_dim, output_dim)
-        )
-
-    def build_processor_model(self):
-        return ProcessorLayer
-
-    def forward(self,data,mean_vec_x,std_vec_x,mean_vec_edge,std_vec_edge):
-        """
-        Encoder encodes graph (node/edge features) into latent vectors (node/edge embeddings)
-        The return of processor is fed into the processor for generating new feature vectors
-        """
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-
-        x = normalize(x,mean_vec_x,std_vec_x)
-        edge_attr=normalize(edge_attr,mean_vec_edge,std_vec_edge)
-
-        self.operation_count = 0
-
-        # Step 1: encode node/edge features into latent node/edge embeddings
-        x = self.node_encoder(x) # output shape is the specified hidden dimension
-        edge_attr = self.edge_encoder(edge_attr) # output shape is the specified hidden dimension
-
-        # Step 2: perform message passing with latent node/edge embeddings
-        layer_outputs = [x]  # Store layer outputs for skip connections
-        for i in range(self.num_layers):
-            # Count message passing operations
-            num_edges = data.edge_index.shape[1]
-            message_ops = num_edges * (self.hidden_dim ** 2)
-            self.operation_count += message_ops
-            # Add skip connection from 8 layers back (keep existing logic)
-            if i >= 8 and i % 8 == 0:  # Every 8 layers after the 8th
-                x = x + self.skip_projection(layer_outputs[i-8])
-                
-            x, edge_attr = self.processor[i](x, edge_index, edge_attr)
-            layer_outputs.append(x)  # Store current layer output
-            
-            # FIXED: Adaptive global attention frequency
-            if (i + 1) % self.attention_freq == 0:
-                num_nodes = x.size(0)
-                attention_ops = num_nodes ** 2 * self.hidden_dim
-                self.operation_count += attention_ops
-                # Create batch index if not provided
-                batch = getattr(data, 'batch', None)
-                if batch is None:
-                    batch = torch.zeros(x.size(0), device=x.device, dtype=torch.long)
-                    
-                global_info = self.global_attention(x, batch=batch)
-                x = x + 0.2 * global_info  # Mix with local representations
-
-        # step 3: decode latent node embeddings into physical quantities of interest
-        return self.decoder(x)
-    
-    def get_operation_count(self):
-        return self.operation_count
-    
-    def loss(self, pred, inputs, mean_vec_y, std_vec_y):
-        # In the new feature structure:
-        # data.x[:, 0:2] = node positions (x, y)
-        # data.x[:, 2] = is_hole_edge indicator
-        # data.x[:, 3] = is_fixed indicator
-        # data.x[:, 4] = is_displaced indicator
-        # data.x[:, 5] = displacement_amount
-        
-        # Define which nodes to calculate loss for (not fixed nodes)
-        # We'll calculate loss for nodes that are not fixed boundaries
-        loss_mask = inputs.x[:, 3] < 0.5  # Only include nodes where is_fixed = 0
-        
-        # Normalize labels with dataset statistics
-        labels = normalize(inputs.y, mean_vec_y, std_vec_y)
-        
-        # Ensure the shapes match
-        if labels.shape != pred.shape:
-            raise ValueError(f"Shape mismatch: labels shape {labels.shape} and pred shape {pred.shape} must match")
-
-        # Find sum of square errors
-        error = torch.sum((labels - pred) ** 2, axis=1)
-
-        # Root and mean the errors for the nodes we calculate loss for
-        loss = torch.sqrt(torch.mean(error[loss_mask]))
-
-        return loss
-    
-class ProcessorLayer(MessagePassing):
-    def __init__(self, in_channels, out_channels,  **kwargs):
-        super(ProcessorLayer, self).__init__(  **kwargs )
-        """
-        in_channels: dim of node embeddings [128], out_channels: dim of edge embeddings [128]
-
-        """
-        self.attention = nn.Sequential(
-            Linear(3*in_channels, 1),
-            nn.Sigmoid()
-        )
-
-        # Note that the node and edge encoders both have the same hidden dimension
-        # size. This means that the input of the edge processor will always be
-        # three times the specified hidden dimension
-        # (input: adjacent node embeddings and self embeddings)
-        self.edge_mlp = Sequential(Linear( 3* in_channels , out_channels),
-                                   PReLU(),
-                                   Linear( out_channels, out_channels),
-                                   LayerNorm(out_channels))
-
-        self.node_mlp = Sequential(Linear( 2* in_channels , out_channels),
-                                   PReLU(),
-                                   Linear( out_channels, out_channels),
-                                   LayerNorm(out_channels))
-
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        """
-        reset parameters for stacked MLP layers
-        """
-        self.edge_mlp[0].reset_parameters()
-        self.edge_mlp[2].reset_parameters()
-
-        self.node_mlp[0].reset_parameters()
-        self.node_mlp[2].reset_parameters()
-
-    def forward(self, x, edge_index, edge_attr, size = None):
-        """
-        Handle the pre and post-processing of node features/embeddings,
-        as well as initiates message passing by calling the propagate function.
-
-        Note that message passing and aggregation are handled by the propagate
-        function, and the update
-
-        x has shape [node_num , in_channels] (node embeddings)
-        edge_index: [2, edge_num]
-        edge_attr: [E, in_channels]
-
-        """
-        # Create mask before normalization
-        # mask = (x.sum(dim=1) != 0)
-        # print(f"Mask shape: {mask.shape}")
-        # print(f"Number of real nodes: {mask.sum().item()}")
-
-        # # print(f"Before propagate - x shape: {x.shape}")
-        # print(f"Before propagate - edge_index shape: {edge_index.shape}")
-        # print(f"Before propagate - edge_attr shape: {edge_attr.shape}")
-
-        out, updated_edges = self.propagate(edge_index, x = x, edge_attr = edge_attr, size = size) # out has the shape of [E, out_channels]
-
-        # print(f"After propagate - x shape: {x.shape}")
-        # print(f"After propagate - out shape: {out.shape}")
-
-        ## Mask out the padded nodes
-        # mask = (x.sum(dim=1) != 0)
-        # print(f"Mask shape: {mask.shape}")
-        # print(f"Number of real nodes: {mask.sum().item()}")
-
-        # # Apply mask to filter out padded nodes
-        # x = x[mask]
-        # out = out[mask]
-
-        # print(f"After Mask - x shape: {x.shape}")
-        # print(f"After Mask - out shape: {out.shape}")
-
-        updated_nodes = torch.cat([x, out], dim=1)        # Complete the aggregation through self-aggregation
-
-        updated_nodes = x + self.node_mlp(updated_nodes) # residual connection
-
-        return updated_nodes, updated_edges
-
-    def message(self, x_i, x_j, edge_attr):
-        """
-        source_node: x_i has the shape of [E, in_channels]
-        target_node: x_j has the shape of [E, in_channels]
-        target_edge: edge_attr has the shape of [E, out_channels]
-
-        The messages that are passed are the raw embeddings. These are not processed.
-        # """
-        # print(f"message - x_i shape: {x_i.shape}")
-        # print(f"message - x_j shape: {x_j.shape}")
-        # print(f"message - edge_attr shape: {edge_attr.shape}")
-
-        updated_edges = torch.cat([x_i, x_j, edge_attr], dim=1) # tmp_emb has the shape of [E, 3 * in_channels]
-        updated_edges = self.edge_mlp(updated_edges) + edge_attr
-
-        return updated_edges
-
-    def aggregate(self, updated_edges, edge_index, dim_size = None):
-        """
-        First we aggregate from neighbors (i.e., adjacent nodes) through concatenation,
-        then we aggregate self message (from the edge itself). This is streamlined
-        into one operation here.
-        """
-
-        # The axis along which to index number of nodes.
-        node_dim = 0
-
-        # out = torch_scatter.scatter(updated_edges, edge_index[0, :], dim=node_dim, reduce='sum')
-        # Ensure the output shape matches the input shape by specifying dim_size
-        out = torch_scatter.scatter(updated_edges, edge_index[0, :], dim=node_dim, dim_size=dim_size, reduce='sum')
-
-        # print(f"node dim {node_dim}")
-        # print(f"aggregate - updated_edges shape: {updated_edges.shape}")
-        # print(f"aggregate - edge_index shape: {edge_index.shape}")
-        # print(f"aggregate - out shape after scatter: {out.shape}")
-
-        return out, updated_edges
-    
 def build_optimizer(args, params):
     weight_decay = args.weight_decay
     filter_fn = filter(lambda p : p.requires_grad, params)
@@ -775,7 +499,7 @@ def analyze_node_features(dataset):
 
 def train(train_dataset, val_dataset, device, stats_list, args):
     '''
-    Performs a training loop on the dataset for MeshGraphNets with proper validation.
+    Performs a training loop on the dataset for FCLGA GraphTransformer with proper validation.
     '''
     df = pd.DataFrame(columns=['epoch','train_loss','val_loss', 'velo_val_loss'])
 
@@ -799,7 +523,7 @@ def train(train_dataset, val_dataset, device, stats_list, args):
     num_edge_features = train_dataset[0].edge_attr.shape[1]
     num_classes = 1
 
-    model = MeshGraphNet(num_node_features, num_edge_features, 
+    model = FCLGA_GraphTransformer(num_node_features, num_edge_features, 
                         args.hidden_dim, num_classes, args).to(device)
     scheduler, opt = build_optimizer(args, model.parameters())
 
@@ -877,9 +601,7 @@ def train(train_dataset, val_dataset, device, stats_list, args):
     PATH = os.path.join(checkpoint_dir, model_name + '.csv')
     df.to_csv(PATH, index=False)
     
-    # Plot results from final model (example prediction on validation set)
-    plot_name = 'validation_set_prediction_example'
-    visualize(val_loader, best_model, postprocess_dir, plot_name, stats_list)
+    # Note: Visualization moved to test set evaluation only (more meaningful)
     
     return val_losses, losses, velo_val_losses, best_model
 
@@ -955,6 +677,8 @@ For different geometries, consider adjusting hyperparameters.
     # Device and Output
     parser.add_argument('--device', type=str, default='auto', choices=['auto', 'cuda', 'cpu'],
                         help='Device to use (default: auto - uses CUDA if available)')
+    parser.add_argument('--material_type', type=str, default='nonlinear', choices=['linear', 'nonlinear'],
+                        help='Material type: linear (elastic) or nonlinear (plastic) - default: nonlinear')
     parser.add_argument('--save_best_model', action='store_true', default=True,
                         help='Save best model during training (default: True)')
     parser.add_argument('--save_velo_val', action='store_true', default=True,
@@ -997,7 +721,7 @@ For different geometries, consider adjusting hyperparameters.
     root_dir = os.getcwd()
     dataset_dir = os.path.join(root_dir, 'datasets')
     checkpoint_dir = os.path.join(results_folder, 'best_models')
-    postprocess_dir = os.path.join(results_folder, 'plots')
+    postprocess_dir = os.path.join(results_folder, 'training_results')
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(postprocess_dir, exist_ok=True)
     
@@ -1030,11 +754,11 @@ For different geometries, consider adjusting hyperparameters.
     print()
 
     # Initialize directories
-    results_folder = create_results_folder()
+    results_folder = create_results_folder(material_type=args.material_type)
     root_dir = os.getcwd()
-    dataset_dir = os.path.join(root_dir, 'datasets')
+    dataset_dir = os.path.join(root_dir, 'data', 'processed', args.material_type, 'datasets')
     checkpoint_dir = os.path.join(results_folder, 'best_models')
-    postprocess_dir = os.path.join(results_folder, 'plots')
+    postprocess_dir = os.path.join(results_folder, 'training_results')
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(postprocess_dir, exist_ok=True)
     
@@ -1101,8 +825,8 @@ For different geometries, consider adjusting hyperparameters.
     args.val_size = val_size
     args.test_size = test_size
     
-    # Get statistics for normalization
-    stats_list = get_stats(dataset)
+    # Get statistics for normalization (use only training data to prevent data leakage)
+    stats_list = get_stats(train_dataset)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.device = device
@@ -1111,3 +835,33 @@ For different geometries, consider adjusting hyperparameters.
     val_losses, losses, velo_val_losses, best_model = train(
         train_dataset, val_dataset, device, stats_list, args
     )
+    
+    # Evaluate on test set
+    print("\nEvaluating final model on test set...")
+    final_test_loss, final_test_rmse = evaluate_final_model(
+        test_dataset, best_model, device, stats_list, args, postprocess_dir
+    )
+    
+    print(f"\nFinal Test Loss: {final_test_loss:.5f}")
+    print(f"Final Test RMSE: {final_test_rmse:.5f}")
+    
+    # Save final best model
+    model_name = 'model_nl' + str(args.num_layers) + '_bs' + str(args.batch_size) + \
+                 '_hd' + str(args.hidden_dim) + '_ep' + str(args.epochs) + \
+                 '_wd' + str(args.weight_decay) + '_lr' + str(args.lr) + \
+                 '_shuff_' + str(args.shuffle) + '_tr' + str(args.train_size) + \
+                 '_te' + str(args.test_size)
+    model_path = os.path.join(checkpoint_dir, model_name + '_FINAL.pt')
+    torch.save(best_model.state_dict(), model_path)
+    print(f"\n✓ Final model saved to: {model_path}")
+    
+    # Save final plots
+    test_losses = [final_test_loss.item()]
+    save_plots(args, losses, val_losses, test_losses, postprocess_dir=postprocess_dir)
+    
+    print("="*80)
+    print("TRAINING COMPLETE")
+    print(f"Results saved in: {results_folder}")
+    print(f"  - Models: {checkpoint_dir}")
+    print(f"  - Training results: {postprocess_dir}")
+    print("="*80)

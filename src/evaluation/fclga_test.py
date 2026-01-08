@@ -20,6 +20,8 @@ import random
 import numpy as np
 import argparse
 import os
+import json
+from pathlib import Path
 
 from src.models.fclga_graph_transformer import FCLGA_GraphTransformer
 from src.utils.data_utils import get_stats
@@ -30,6 +32,60 @@ from src.utils.test_utils import (
     benchmark_inference
 )
 from config import paths as config_paths
+
+
+def load_hyperparameters_from_training(training_run_path):
+    """
+    Load hyperparameters and model path from training run directory.
+    
+    Args:
+        training_run_path (str): Path to training run directory.
+        
+    Returns:
+        tuple: (hyperparameters_dict, model_path_str)
+    """
+    run_path = Path(training_run_path)
+    
+    if not run_path.exists():
+        raise FileNotFoundError(f"Training run directory not found: {run_path}")
+    
+    # Find hyperparameters JSON
+    hyp_json = run_path / 'hyperparameter_optimization_results' / 'best_hyperparameters.json'
+    if not hyp_json.exists():
+        raise FileNotFoundError(
+            f"Hyperparameters file not found: {hyp_json}\n"
+            f"Make sure the training run completed with Optuna optimization."
+        )
+    
+    # Load hyperparameters
+    print(f"Loading hyperparameters from: {hyp_json}")
+    with open(hyp_json, 'r') as f:
+        params = json.load(f)
+    
+    # Find best model
+    best_models_dir = run_path / 'best_models'
+    if not best_models_dir.exists():
+        raise FileNotFoundError(f"Best models directory not found: {best_models_dir}")
+    
+    model_files = list(best_models_dir.glob('*.pt'))
+    if not model_files:
+        raise FileNotFoundError(f"No model files found in {best_models_dir}")
+    
+    # Prefer FINAL model if it exists, otherwise use most recent
+    final_models = [m for m in model_files if 'FINAL' in m.name]
+    if final_models:
+        model_path = final_models[0]
+        print(f"Found final trained model: {model_path.name}")
+    else:
+        # Use newest model by modification time
+        model_path = max(model_files, key=lambda x: x.stat().st_mtime)
+        print(f"Found best model: {model_path.name}")
+    
+    print("\nLoaded hyperparameters:")
+    for key, value in params.items():
+        print(f"  {key}: {value}")
+    
+    return params, str(model_path)
 
 
 def parse_arguments():
@@ -46,16 +102,31 @@ def parse_arguments():
 
     # Model and data paths
     parser.add_argument(
+        '--training_run',
+        type=str,
+        default=None,
+        help='Path to training run directory (auto-loads hyperparameters and model). '
+             'If provided, overrides --model_path and hyperparameter arguments.'
+    )
+    parser.add_argument(
         '--model_path',
         type=str,
-        required=True,
-        help='Path to trained model checkpoint (.pt file)'
+        default=None,
+        help='Path to trained model checkpoint (.pt file). '
+             'Required if --training_run is not provided.'
     )
     parser.add_argument(
         '--dataset_path',
         type=str,
         default=None,
-        help='Path to dataset (.pt file). If not provided, uses datasets/processed_data.pt'
+        help='Path to dataset (.pt file). If not provided, uses data/processed/{material_type}/datasets/processed_data.pt'
+    )
+    parser.add_argument(
+        '--material_type',
+        type=str,
+        default='nonlinear',
+        choices=['linear', 'nonlinear'],
+        help='Material type: linear (elastic) or nonlinear (plastic) - default: nonlinear'
     )
 
     # Model hyperparameters (must match training configuration)
@@ -86,12 +157,6 @@ def parse_arguments():
 
     # Dataset parameters
     parser.add_argument(
-        '--train_size',
-        type=int,
-        default=400,
-        help='Training set size (for dataset splitting)'
-    )
-    parser.add_argument(
         '--batch_size',
         type=int,
         default=4,
@@ -112,16 +177,59 @@ def parse_arguments():
         help='Number of test samples to visualize'
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    
+    # Validate arguments and auto-load if training_run is provided
+    if args.training_run is not None:
+        # Auto-load mode: load hyperparameters and model from training run
+        print("="*80)
+        print("AUTO-LOADING FROM TRAINING RUN")
+        print("="*80)
+        print(f"Training run directory: {args.training_run}\n")
+        
+        try:
+            params, model_path = load_hyperparameters_from_training(args.training_run)
+            
+            # Override args with loaded hyperparameters
+            args.model_path = model_path
+            args.num_layers = params['num_layers']
+            args.hidden_dim = params['hidden_dim']
+            args.dropout_rate = params['dropout_rate']
+            args.attention_freq = params['attention_freq']
+            args.batch_size = params['batch_size']
+            
+            # Note: train_size no longer needed - using percentage-based splitting
+            
+            print("\n✓ Hyperparameters and model path loaded successfully!")
+            print("="*80 + "\n")
+            
+        except Exception as e:
+            print(f"\n✗ Error loading from training run: {e}")
+            print("\nPlease ensure:")
+            print("  1. The training run directory exists")
+            print("  2. It contains hyperparameter_optimization_results/best_hyperparameters.json")
+            print("  3. It contains best_models/*.pt files")
+            raise
+    
+    elif args.model_path is None:
+        # Neither training_run nor model_path provided
+        parser.error("Either --training_run or --model_path must be provided")
+    
+    return args
 
 
-def load_and_split_dataset(dataset_path, train_size, shuffle=True, seed=5):
+def load_and_split_dataset(dataset_path, shuffle=True, seed=5):
     """
-    Load dataset and split into train/val/test sets.
+    Load dataset and split into train/val/test sets using percentage-based splitting.
+    
+    Splits dataset as 70% train / 15% val / 15% test to match legacy behavior.
+    This ensures consistent splitting regardless of dataset size:
+    - 500 samples → 350/75/75 (matches legacy)
+    - 700 samples → 490/105/105
+    - Any size scales proportionally
 
     Args:
         dataset_path (str): Path to dataset file.
-        train_size (int): Number of samples for training set.
         shuffle (bool, optional): Whether to shuffle before splitting. Defaults to True.
         seed (int, optional): Random seed for reproducibility. Defaults to 5.
 
@@ -142,19 +250,21 @@ def load_and_split_dataset(dataset_path, train_size, shuffle=True, seed=5):
         )
         random.shuffle(dataset)
 
-    # Split dataset
-    val_size = 1
-    test_size = len(dataset) - train_size - val_size
+    # Split dataset using percentages (70% train, 15% val, 15% test)
+    total_size = len(dataset)
+    train_size = int(total_size * 0.7)
+    val_size = int(total_size * 0.15)
+    test_size = total_size - train_size - val_size
 
     train_dataset = dataset[:train_size]
     val_dataset = dataset[train_size:train_size + val_size]
     test_dataset = dataset[train_size + val_size:]
 
-    print("\nDataset split:")
-    print(f"  Total size: {len(dataset)}")
-    print(f"  Training: {train_size}")
-    print(f"  Validation: {val_size}")
-    print(f"  Test: {test_size}")
+    print("\nDataset split (70%/15%/15%):")
+    print(f"  Total size: {total_size}")
+    print(f"  Training: {train_size} (70%)")
+    print(f"  Validation: {val_size} (15%)")
+    print(f"  Test: {test_size} (15%)")
 
     return train_dataset, val_dataset, test_dataset, dataset
 
@@ -244,9 +354,16 @@ def main():
     np.random.seed(5)
 
     # Setup directories
-    config_paths.setup_directories()
+    # If training_run was provided, put test results in that directory
+    if args.training_run is not None:
+        postprocess_dir = os.path.join(args.training_run, 'test_results')
+        os.makedirs(postprocess_dir, exist_ok=True)
+    else:
+        # Only create TEST_RESULTS_DIR when not using training_run
+        postprocess_dir = str(config_paths.TEST_RESULTS_DIR)
+        os.makedirs(postprocess_dir, exist_ok=True)
+    
     checkpoint_dir = str(config_paths.BEST_MODELS_DIR)
-    postprocess_dir = str(config_paths.PLOTS_DIR)
 
     # Create args object for model (legacy compatibility)
     model_params = {
@@ -274,13 +391,15 @@ def main():
     if args.dataset_path:
         dataset_path = args.dataset_path
     else:
-        dataset_path = str(config_paths.DATASETS_DIR / 'processed_data.pt')
+        from config.paths import get_paths
+        paths = get_paths(args.material_type)
+        dataset_path = str(paths.DATASETS_DIR / 'processed_data.pt')
     train_dataset, val_dataset, test_dataset, full_dataset = (
-        load_and_split_dataset(dataset_path, args.train_size)
+        load_and_split_dataset(dataset_path)
     )
 
-    # Get normalization statistics from full dataset
-    stats_list = get_stats(full_dataset)
+    # Get normalization statistics from training data only (matches legacy, prevents data leakage)
+    stats_list = get_stats(train_dataset)
 
     # Create model
     device = model_args.device
@@ -301,6 +420,7 @@ def main():
         test_dataset,
         device,
         stats_list,
+        postprocess_dir,
         num_runs=args.num_benchmark_runs
     )
 

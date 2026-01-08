@@ -20,5 +20,5 @@ if __name__ == '__main__':
     print("FCLGA GraphTransformer - Testing")
     print("=" * 60)
     print("\nFor now, run the testing script directly:")
-    print("python src/evaluation/fclga_test_model.py")
+    print("python -m src.evaluation.fclga_test_model")
     print("\n(Standalone entry point coming in Phase 3)")

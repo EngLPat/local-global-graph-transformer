@@ -143,11 +143,9 @@ def evaluate_model(dataset, model, device, stats_list, postprocess_dir):
                 individual_rmses.append(sample_rmse)
 
                 # Print per-sample RMSE
-                print(f"Sample {num_samples:3d}: RMSE = {sample_rmse:.8f} "
-                      f"({non_zero_mask.sum().item():5d} non-zero nodes, "
-                      f"{(~non_zero_mask).sum().item():4d} masked)")
+                print(f"Sample {num_samples:3d}: RMSE = {sample_rmse:.8f}")
             else:
-                print(f"Sample {num_samples:3d}: No non-zero nodes found (all masked)")
+                print(f"Sample {num_samples:3d}: No non-zero nodes found")
                 individual_rmses.append(0.0)
 
             num_samples += 1
@@ -187,11 +185,6 @@ def evaluate_model(dataset, model, device, stats_list, postprocess_dir):
     print(f"Mean of per-sample RMSEs: {mean_sample_rmse:.8f}")
     print(f"RMSE Std Dev: {rmse_std:.8f}")
     print(f"RMSE Range: [{rmse_min:.8f}, {rmse_max:.8f}]")
-    print("\n--- MASKING INFO ---")
-    print(f"Total nodes across all samples: {len(all_gts)}")
-    print(f"Non-zero nodes (used): {non_zero_mask_global.sum()}")
-    print(f"Masked nodes (padded/zero): {(~non_zero_mask_global).sum()}")
-    print(f"Masking percentage: {((~non_zero_mask_global).sum() / len(all_gts) * 100):.2f}%")
     print(f"{'=' * 70}\n")
 
     # Save detailed results
@@ -207,30 +200,16 @@ def evaluate_model(dataset, model, device, stats_list, postprocess_dir):
         f.write(f"Mean of per-sample RMSEs: {mean_sample_rmse:.8f}\n")
         f.write(f"RMSE Std Dev: {rmse_std:.8f}\n")
         f.write(f"RMSE Range: [{rmse_min:.8f}, {rmse_max:.8f}]\n\n")
-        f.write("--- MASKING INFO ---\n")
-        f.write(f"Total nodes across all samples: {len(all_gts)}\n")
-        f.write(f"Non-zero nodes (used): {non_zero_mask_global.sum()}\n")
-        f.write(
-            f"Masked nodes (padded/zero): "
-            f"{(~non_zero_mask_global).sum()}\n"
-        )
-        masking_pct = (~non_zero_mask_global).sum() / len(all_gts) * 100
-        f.write(f"Masking percentage: {masking_pct:.2f}%\n\n")
         f.write("Individual Sample RMSEs:\n")
         for i, rmse in enumerate(individual_rmses):
             f.write(f"  Sample {i}: {rmse:.8f}\n")
 
     print(f"Detailed results saved to: {results_path}")
 
-    # Visualize a representative sample (closest to mean RMSE)
-    closest_idx = np.argmin(np.abs(individual_rmses - mean_sample_rmse))
-    plot_name = f'test_representative_sample_{closest_idx}'
-    visualize_sample(model, dataset, closest_idx, postprocess_dir, plot_name, stats_list)
-
     return mean_loss, global_rmse
 
 
-def benchmark_inference(model, dataset, device, stats_list, num_runs=100):
+def benchmark_inference(model, dataset, device, stats_list, postprocess_dir, num_runs=100):
     """
     Benchmark model inference time and compare with FEM.
 
@@ -242,6 +221,7 @@ def benchmark_inference(model, dataset, device, stats_list, num_runs=100):
         dataset: Dataset to benchmark on (uses first sample).
         device (str): Device to run on ('cuda' or 'cpu').
         stats_list (list): Normalization statistics.
+        postprocess_dir (str): Directory to save benchmark results.
         num_runs (int, optional): Number of inference iterations. Defaults to 100.
 
     Returns:
@@ -321,27 +301,7 @@ def benchmark_inference(model, dataset, device, stats_list, num_runs=100):
         f"{1 / avg_inference_time:.1f} predictions/second"
     )
 
-    print("\nSpeedup Analysis vs FEM:")
-    print(f"  Abaqus FEM time: {actual_fem_time:.1f} seconds")
-    print(f"  GNN inference time: {avg_inference_time * 1000:.3f} ms")
-    print(f"  Speedup: {results['speedup']:.0f}× faster than FEM")
-    print(f"  Time saved per prediction: {results['time_saved']:.3f} seconds")
-
-    # Break-even analysis
-    training_time_estimate = 3600  # 1 hour estimate
-    time_saved_per_pred = results['time_saved']
-    if time_saved_per_pred > 0:
-        breakeven_predictions = training_time_estimate / time_saved_per_pred
-    else:
-        breakeven_predictions = float('inf')
-
-    print("\nBreak-even Analysis:")
-    print(f"  Training time estimate: {training_time_estimate / 3600:.1f} hours")
-    print(f"  Break-even point: {breakeven_predictions:.0f} predictions")
-    print(f"  Training ROI: Profitable after {breakeven_predictions:.0f} simulations")
-
     # Save results to file
-    postprocess_dir = str(config_paths.PLOTS_DIR)
     benchmark_path = os.path.join(postprocess_dir, 'inference_benchmark.txt')
     with open(benchmark_path, 'w') as f:
         f.write("=" * 60 + "\n")
@@ -356,17 +316,8 @@ def benchmark_inference(model, dataset, device, stats_list, num_runs=100):
         f.write(f"  Total time: {total_inference_time:.3f} seconds\n")
         inf_freq = 1 / avg_inference_time
         f.write(
-            f"  Inference frequency: {inf_freq:.1f} predictions/second\n\n"
+            f"  Inference frequency: {inf_freq:.1f} predictions/second\n"
         )
-        f.write("Speedup Analysis vs FEM:\n")
-        f.write(f"  Abaqus FEM time: {actual_fem_time:.1f} seconds\n")
-        f.write(f"  GNN inference time: {avg_inference_time * 1000:.3f} ms\n")
-        f.write(f"  Speedup: {results['speedup']:.0f}× faster\n")
-        f.write(f"  Time saved per prediction: {results['time_saved']:.3f} seconds\n\n")
-        f.write("Break-even Analysis:\n")
-        f.write(f"  Training time estimate: {training_time_estimate / 3600:.1f} hours\n")
-        f.write(f"  Break-even point: {breakeven_predictions:.0f} predictions\n")
-        f.write(f"  Training ROI: Profitable after {breakeven_predictions:.0f} simulations\n")
 
     print(f"\nBenchmark results saved to: {benchmark_path}")
     print("=" * 60 + "\n")

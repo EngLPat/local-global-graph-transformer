@@ -235,7 +235,7 @@ def run_training(args, project_root):
         print("Please implement the training module first.\n")
         return False
     
-    cmd = f"python {training_script}"
+    cmd = f"python -m src.training.fclga_train_model"
     return run_subprocess(cmd, "Model Training", cwd=project_root)
 
 
@@ -252,7 +252,7 @@ def run_testing(args, project_root):
         print("Please implement the evaluation module first.\n")
         return False
     
-    cmd = f"python {testing_script}"
+    cmd = f"python -m src.evaluation.fclga_test_model"
     return run_subprocess(cmd, "Model Testing", cwd=project_root)
 
 

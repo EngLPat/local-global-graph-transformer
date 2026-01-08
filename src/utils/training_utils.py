@@ -15,15 +15,23 @@ from config import paths as config_paths
 from src.utils.data_utils import normalize, unnormalize
 
 
-def create_results_folder():
+def create_results_folder(material_type="nonlinear"):
+    """Create timestamped results folder for training run.
+    
+    Args:
+        material_type: Either "linear" or "nonlinear"
+    
+    Returns:
+        Path object for the created folder
+    """
     # Get current timestamp in the format YYYYMMDD_HHMMSS
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Create the folder name with the timestamp
-    result_dir = f"0_standard_{timestamp}"
+    # Create the folder name with material type and timestamp
+    result_dir = f"training_{material_type}_{timestamp}"
     
-    # Create the full path (assuming you want it in the current directory)
-    full_path = Path(os.getcwd()) / "results" / result_dir
+    # Create the full path in results/{material_type}/
+    full_path = Path(os.getcwd()) / "results" / material_type / result_dir
     
     # Create the directory if it doesn't exist
     os.makedirs(full_path, exist_ok=True)
@@ -77,7 +85,7 @@ def evaluate_final_model(test_dataset, best_model, device, stats_list, args, pos
     if postprocess_dir is not None:
         try:
             from src.utils.visualization import visualize
-            plot_name = 'test_set_prediction_example'
+            plot_name = 'test_set_prediction_comparison'
             visualize(test_loader, best_model, postprocess_dir, plot_name, stats_list)
         except ImportError:
             print("⚠ Could not import visualize function - skipping visualization")
