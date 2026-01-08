@@ -1,0 +1,74 @@
+[project]
+name = "fclga-graphtransformer"
+version = "1.0.0"
+description = "Graph Neural Network with Hybrid Local-Global Attention for structural mechanics"
+authors = [
+    {name = "Luca Patrignani", email = "l.patrignani@imperial.ac.uk"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+
+[tool.ruff]
+# Exclude auto-generated and legacy files
+exclude = [
+    ".git",
+    "__pycache__",
+    "legacy",
+    "legacy_elastic",
+    "*.egg-info",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+]
+
+# Line length matches Black's default
+line-length = 100
+
+# Target Python 3.10+
+target-version = "py310"
+
+[tool.ruff.lint]
+# Enable essential rules
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "N",   # pep8-naming
+    "UP",  # pyupgrade (modernize Python syntax)
+    "B",   # flake8-bugbear (common bugs)
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+
+# Ignore specific rules that conflict with research code
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "F403",   # Star imports (required for Abaqus scripts)
+    "F405",   # Undefined names from star imports (Abaqus)
+    "N803",   # Argument name should be lowercase (mathematical notation)
+    "N806",   # Variable in function should be lowercase (mathematical notation)
+    "B008",   # Do not perform function call in argument defaults (common in ML)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Abaqus scripts need star imports
+"src/preprocessing/*/fclga_generate_geometry.py" = ["F403", "F405"]
+"src/preprocessing/*/fclga_extract_results.py" = ["F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "config"]
+
+[tool.ruff]
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  "node_modules",
+  "miniconda3",
+  "anaconda3",
+  ".conda",
+]
