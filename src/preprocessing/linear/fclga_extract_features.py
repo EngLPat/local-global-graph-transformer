@@ -21,7 +21,6 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 
-
 # Setup organized paths
 PROJECT_ROOT = Path.cwd()
 GEOMETRY_DIR = PROJECT_ROOT / "data" / "raw" / "linear" / "geometry"
@@ -33,22 +32,19 @@ DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
 def parse_inp_file_for_nodes(filepath):
     """Parse Abaqus .inp file to extract nodes and elements.
-    
+
     Reads node coordinates and element connectivity from an Abaqus input file.
     The parser handles multi-section files by tracking section headers.
-    
+
     Args:
         filepath: Path to .inp file
-    
+
     Returns:
         dict: Contains 'nodes' list of (id, x, y) and 'elements' list of (id, [node_ids])
     """
-    data = {
-        "nodes": [],
-        "elements": []
-    }
+    data = {"nodes": [], "elements": []}
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         lines = f.readlines()
 
     in_node_section = False
@@ -85,7 +81,7 @@ def parse_inp_file_for_nodes(filepath):
             if line.startswith("*"):
                 in_element_section = False
             elif line:
-                parts = line.split(',')
+                parts = line.split(",")
                 element_id = int(parts[0].strip())
                 node_indices = [int(node.strip()) for node in parts[1:] if node.strip()]
                 data["elements"].append((element_id, node_indices))
@@ -96,13 +92,13 @@ def parse_inp_file_for_nodes(filepath):
 
 def build_node_edge_index(elements):
     """Build bidirectional edge index from element connectivity.
-    
+
     Creates graph edges by connecting all nodes within each element.
     Automatically creates bidirectional edges for message passing.
-    
+
     Args:
         elements: List of (element_id, [node_ids])
-    
+
     Returns:
         torch.Tensor: Edge index [2, num_edges] with bidirectional connections
     """
@@ -122,16 +118,16 @@ def build_node_edge_index(elements):
 
 def save_triangulation_data(all_data, directory="."):
     """Save triangulation data for visualization.
-    
+
     Creates matplotlib triangulation objects for each sample and saves
     them to a pickle file for later use in result visualization.
-    
+
     Args:
         all_data: List of (parsed_data_dict, Data_object) tuples
         directory: Output directory path
     """
     triangulation_data = {}
-    
+
     for i, (data, data_obj) in enumerate(all_data):
         node_positions = data_obj.x.numpy()
         elements = [[node_id - 1 for node_id in element[1]] for element in data["elements"]]
@@ -140,10 +136,10 @@ def save_triangulation_data(all_data, directory="."):
         nodes_y = node_positions[:, 1]
 
         triangulation = tri.Triangulation(nodes_x, nodes_y, elements)
-        triangulation_data[f'sample_{i}'] = triangulation
+        triangulation_data[f"sample_{i}"] = triangulation
 
-    output_path = Path(directory) / 'triangulation_data.pkl'
-    with open(output_path, 'wb') as file:
+    output_path = Path(directory) / "triangulation_data.pkl"
+    with open(output_path, "wb") as file:
         pickle.dump(triangulation_data, file)
 
     print(f"✓ Triangulation data saved to: {output_path}")
@@ -151,11 +147,11 @@ def save_triangulation_data(all_data, directory="."):
 
 def pad_features(features_list, max_len):
     """Pad feature arrays to uniform length with zeros.
-    
+
     Args:
         features_list: List of numpy arrays with shape [num_nodes, feature_dim]
         max_len: Target length for padding
-    
+
     Returns:
         numpy.ndarray: Padded features [num_samples, max_len, feature_dim]
     """
@@ -169,33 +165,33 @@ def pad_features(features_list, max_len):
             padded_features.append(np.vstack((features, padding)))
         else:
             padded_features.append(features)
-    
+
     return np.array(padded_features)
 
 
 def prepare_node_data_for_gnn(directory="."):
     """Extract and prepare node data from all .inp files.
-    
+
     Main processing function that:
     1. Finds all .inp files in directory
     2. Extracts nodes and elements from each file
     3. Creates PyTorch Geometric Data objects
     4. Pads features to uniform size
     5. Saves node data and triangulation data
-    
+
     Args:
         directory: Directory containing .inp files
     """
     print("=" * 80)
     print("ELASTIC CASE: EXTRACTING FEATURES FROM .INP FILES")
     print("=" * 80)
-    
+
     # Find all .inp files
     inp_files = [f for f in os.listdir(directory) if f.endswith(".inp")]
-    
+
     # Sort numerically by extracting sample number from filename
-    inp_files.sort(key=lambda x: int(re.search(r'(\d+)', x.split('_')[-1]).group()))
-    
+    inp_files.sort(key=lambda x: int(re.search(r"(\d+)", x.split("_")[-1]).group()))
+
     print(f"Found {len(inp_files)} .inp files")
     print("-" * 80)
 
@@ -215,13 +211,13 @@ def prepare_node_data_for_gnn(directory="."):
         data_list.append(data_obj)
         parsed_data_list.append(data)
         max_node_count = max(max_node_count, len(nodes))
-        
+
         if len(data_list) % 50 == 0 or len(data_list) == 1:
             print(f"Processed {len(data_list)}/{len(inp_files)}: {inp_file} ({len(nodes)} nodes)")
 
     print("-" * 80)
     print(f"Maximum node count: {max_node_count}")
-    
+
     # LEGACY ELASTIC: Pad with +1 for compatibility
     print(f"Padding to: {max_node_count + 1} (max_node_count + 1)")
     padded_node_features = pad_features([data.x.numpy() for data in data_list], max_node_count + 1)
@@ -237,7 +233,7 @@ def prepare_node_data_for_gnn(directory="."):
 
     # Save triangulation data for visualization
     save_triangulation_data(list(zip(parsed_data_list, data_list)), str(DATA_PROCESSED))
-    
+
     print("=" * 80)
     print("FEATURE EXTRACTION COMPLETE")
     print("=" * 80)
@@ -245,7 +241,7 @@ def prepare_node_data_for_gnn(directory="."):
 
 def plot_sample(data_obj, data, output_dir="."):
     """Plot node connectivity and triangulation for debugging.
-    
+
     Args:
         data_obj: PyTorch Geometric Data object
         data: Parsed data dictionary
@@ -256,21 +252,21 @@ def plot_sample(data_obj, data, output_dir="."):
 
     # Plot 1: Node connectivity graph
     plt.figure(figsize=(10, 10))
-    plt.scatter(node_positions[:, 0], node_positions[:, 1], c='blue', label='Nodes', s=20)
+    plt.scatter(node_positions[:, 0], node_positions[:, 1], c="blue", label="Nodes", s=20)
 
     for edge in edge_index.T:
         node_start, node_end = edge
         x_coords = [node_positions[node_start, 0], node_positions[node_end, 0]]
         y_coords = [node_positions[node_start, 1], node_positions[node_end, 1]]
-        plt.plot(x_coords, y_coords, 'r-', alpha=0.3, linewidth=0.5)
+        plt.plot(x_coords, y_coords, "r-", alpha=0.3, linewidth=0.5)
 
-    plt.xlabel('X (mm)')
-    plt.ylabel('Y (mm)')
-    plt.title('Node Connectivity Graph')
+    plt.xlabel("X (mm)")
+    plt.ylabel("Y (mm)")
+    plt.title("Node Connectivity Graph")
     plt.legend()
-    plt.axis('equal')
+    plt.axis("equal")
     plt.grid(True, alpha=0.3)
-    plt.savefig(os.path.join(output_dir, 'node_connectivity.png'), dpi=150, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, "node_connectivity.png"), dpi=150, bbox_inches="tight")
     plt.close()
 
     # Plot 2: Triangulation mesh
@@ -280,15 +276,15 @@ def plot_sample(data_obj, data, output_dir="."):
     triangulation = tri.Triangulation(nodes_x, nodes_y, elements)
 
     plt.figure(figsize=(10, 10))
-    plt.triplot(triangulation, 'go-', alpha=0.5, linewidth=0.8)
-    plt.xlabel('X (mm)')
-    plt.ylabel('Y (mm)')
-    plt.title('Triangulation Mesh')
-    plt.axis('equal')
+    plt.triplot(triangulation, "go-", alpha=0.5, linewidth=0.8)
+    plt.xlabel("X (mm)")
+    plt.ylabel("Y (mm)")
+    plt.title("Triangulation Mesh")
+    plt.axis("equal")
     plt.grid(True, alpha=0.3)
-    plt.savefig(os.path.join(output_dir, 'triangulation_mesh.png'), dpi=150, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, "triangulation_mesh.png"), dpi=150, bbox_inches="tight")
     plt.close()
-    
+
     print(f"✓ Plots saved to: {output_dir}")
 
 
@@ -296,6 +292,6 @@ def plot_sample(data_obj, data, output_dir="."):
 # MAIN EXECUTION
 # =============================================================================
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run the parser and prepare node data from elastic geometry directory
     prepare_node_data_for_gnn(directory=str(GEOMETRY_DIR))

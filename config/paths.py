@@ -18,29 +18,29 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 def get_paths(material_type="nonlinear"):
     """Get paths for specific material type.
-    
+
     Args:
         material_type: Either "linear" (elastic) or "nonlinear" (plastic)
-    
+
     Returns:
         SimpleNamespace with all path attributes
     """
     from types import SimpleNamespace
-    
+
     # Data directories (organized by processing stage and material type)
     DATA_DIR = PROJECT_ROOT / "data"
     DATA_RAW = DATA_DIR / "raw" / material_type
     DATA_PROCESSED = DATA_DIR / "processed" / material_type
     DATA_INTERIM = DATA_DIR / "interim" / material_type
-    
+
     # Geometry & Simulation directories
     GEOMETRY_DIR = DATA_RAW / "geometry"  # .inp files
     SIMULATIONS_DIR = DATA_RAW / "simulations"  # .odb files
     STRAINS_DIR = DATA_INTERIM / "strains"  # extracted strain .txt files
-    
+
     # Processed datasets
     DATASETS_DIR = DATA_PROCESSED / "datasets"
-    
+
     # Results directories
     RESULTS_DIR = PROJECT_ROOT / "results" / material_type
     IMAGES_DIR = RESULTS_DIR / "images"  # mesh visualizations
@@ -48,17 +48,17 @@ def get_paths(material_type="nonlinear"):
     BEST_MODELS_DIR = MODELS_DIR / "best"  # best model checkpoints
     TEST_RESULTS_DIR = RESULTS_DIR / "test_results"  # test analysis results
     ANIMATIONS_DIR = TEST_RESULTS_DIR  # legacy compatibility
-    
+
     # Temporary files
     TEMP_DIR = PROJECT_ROOT / "temp" / f"abaqus_scratch_{material_type}"
-    
+
     # File paths for key datasets
     GEOMETRY_TENSOR = DATA_PROCESSED / "plate_geometry_data.pt"
     GEOMETRY_PICKLE = DATA_PROCESSED / "plate_geometry_data.pkl"
     NODE_DATA = DATA_PROCESSED / "node_gnn_data.pt"
     TRIANGULATION_DATA = DATA_PROCESSED / "triangulation_data.pkl"
     STRAINS_TENSOR = DATA_PROCESSED / "strains.pt"
-    
+
     return SimpleNamespace(
         PROJECT_ROOT=PROJECT_ROOT,
         DATA_DIR=DATA_DIR,
@@ -123,30 +123,30 @@ def setup_directories():
         TEST_RESULTS_DIR,  # Changed from PLOTS_DIR, removed BEST_MODELS_DIR
         TEMP_DIR,
     ]
-    
+
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
-    
+
     return True
 
 
 def get_paths_dict():
     """Return dictionary of all paths for easy access."""
     return {
-        'project_root': PROJECT_ROOT,
-        'data': DATA_DIR,
-        'geometry': GEOMETRY_DIR,
-        'simulations': SIMULATIONS_DIR,
-        'strains': STRAINS_DIR,
-        'datasets': DATASETS_DIR,
-        'images': IMAGES_DIR,
-        'models': MODELS_DIR,
-        'plots': PLOTS_DIR,
-        'temp': TEMP_DIR,
+        "project_root": PROJECT_ROOT,
+        "data": DATA_DIR,
+        "geometry": GEOMETRY_DIR,
+        "simulations": SIMULATIONS_DIR,
+        "strains": STRAINS_DIR,
+        "datasets": DATASETS_DIR,
+        "images": IMAGES_DIR,
+        "models": MODELS_DIR,
+        "plots": PLOTS_DIR,
+        "temp": TEMP_DIR,
     }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test: create all directories
     setup_directories()
     print("✓ All directories created successfully!")

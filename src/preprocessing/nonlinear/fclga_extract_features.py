@@ -19,7 +19,6 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 
-
 # Setup organized paths
 PROJECT_ROOT = Path.cwd()
 GEOMETRY_DIR = PROJECT_ROOT / "data" / "raw" / "nonlinear" / "geometry"
@@ -31,17 +30,14 @@ DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
 def parse_inp_file_for_nodes(filepath):
     """Parse Abaqus .inp file to extract nodes and elements.
-    
+
     Reads node coordinates and element connectivity from an Abaqus input file.
     The parser handles multi-section files by tracking section headers.
 
     """
-    data = {
-        "nodes": [],
-        "elements": []
-    }
+    data = {"nodes": [], "elements": []}
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         lines = f.readlines()
 
     in_node_section = False
@@ -78,7 +74,7 @@ def parse_inp_file_for_nodes(filepath):
             if line.startswith("*"):
                 in_element_section = False
             elif line:
-                parts = line.split(',')
+                parts = line.split(",")
                 element_id = int(parts[0].strip())
                 node_indices = [int(node.strip()) for node in parts[1:] if node.strip()]
                 data["elements"].append((element_id, node_indices))
@@ -89,7 +85,7 @@ def parse_inp_file_for_nodes(filepath):
 
 def build_node_edge_index(elements):
     """Build bidirectional edge index from element connectivity.
-    
+
     Converts element connectivity (faces/cells) into a graph edge list
     by connecting all nodes within each element.
 
@@ -110,15 +106,15 @@ def build_node_edge_index(elements):
 
 def save_triangulation_data(all_data, directory):
     """Save triangulation data for visualization purposes.
-    
+
     Creates matplotlib Triangulation objects from mesh data for contour plotting.
-    
+
     Args:
         all_data: List of tuples (parsed_data, data_obj) for each sample
         directory: Output directory path
     """
     triangulation_data = {}
-    
+
     for i, (data, data_obj) in enumerate(all_data):
         node_positions = data_obj.x.numpy()
         # Convert to 0-indexed
@@ -128,10 +124,10 @@ def save_triangulation_data(all_data, directory):
         nodes_y = node_positions[:, 1]
 
         triangulation = tri.Triangulation(nodes_x, nodes_y, elements)
-        triangulation_data[f'sample_{i}'] = triangulation
+        triangulation_data[f"sample_{i}"] = triangulation
 
-    output_path = os.path.join(directory, 'triangulation_data.pkl')
-    with open(output_path, 'wb') as file:
+    output_path = os.path.join(directory, "triangulation_data.pkl")
+    with open(output_path, "wb") as file:
         pickle.dump(triangulation_data, file)
 
     print(f"✓ Triangulation data saved to: {output_path}")
@@ -139,11 +135,11 @@ def save_triangulation_data(all_data, directory):
 
 def pad_features(features_list, max_len):
     """Pad feature arrays to uniform length for batching.
-    
+
     Args:
         features_list: List of numpy arrays with shape [n_nodes, n_features]
         max_len: Target length for padding
-        
+
     Returns:
         np.ndarray: Padded features array [n_samples, max_len, n_features]
     """
@@ -161,7 +157,7 @@ def pad_features(features_list, max_len):
 
 def prepare_node_data_for_gnn(directory=None):
     """Parse all .inp files and create PyTorch Geometric graph data.
-    
+
     Main processing function that reads all Abaqus input files, extracts
     node positions and connectivity, and creates graph structures suitable
     for GNN training.
@@ -171,18 +167,19 @@ def prepare_node_data_for_gnn(directory=None):
         directory = GEOMETRY_DIR
     else:
         directory = Path(directory)
-    
+
     # Get all .inp files sorted by sample number
     # Regex matches number in filename: Plate_nonlinear_0.inp -> 0
     inp_files = sorted(
-        directory.glob("*.inp"), 
-        key=lambda x: int(re.search(r'(\d+)', x.stem).group()) 
-                      if re.search(r'(\d+)', x.stem) else 0
+        directory.glob("*.inp"),
+        key=lambda x: int(re.search(r"(\d+)", x.stem).group())
+        if re.search(r"(\d+)", x.stem)
+        else 0,
     )
-    
+
     if not inp_files:
         raise FileNotFoundError(f"No .inp files found in {directory}")
-    
+
     print(f"\nProcessing {len(inp_files)} geometry files...")
 
     data_list = []
@@ -223,10 +220,10 @@ def prepare_node_data_for_gnn(directory=None):
 
 def plot_sample(data_obj, data, output_dir=None):
     """Plot mesh geometry and triangulation for visual inspection.
-    
+
     Creates two plots: node connectivity graph and triangulation mesh.
     Useful for debugging and validation.
-    
+
     Args:
         data_obj: PyTorch Geometric Data object with graph structure
         data: Parsed data dictionary with elements
@@ -237,23 +234,23 @@ def plot_sample(data_obj, data, output_dir=None):
 
     # Plot node connectivity
     plt.figure(figsize=(10, 10))
-    plt.scatter(node_positions[:, 0], node_positions[:, 1], c='blue', label='Nodes')
+    plt.scatter(node_positions[:, 0], node_positions[:, 1], c="blue", label="Nodes")
 
     for edge in edge_index.T:
         node_start, node_end = edge
         x_coords = [node_positions[node_start, 0], node_positions[node_end, 0]]
         y_coords = [node_positions[node_start, 1], node_positions[node_end, 1]]
-        plt.plot(x_coords, y_coords, 'r-', alpha=0.5)
+        plt.plot(x_coords, y_coords, "r-", alpha=0.5)
 
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title('Node Connectivity')
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Node Connectivity")
     plt.legend()
-    
+
     if output_dir:
-        plt.savefig(os.path.join(output_dir, 'node_connectivity.png'))
+        plt.savefig(os.path.join(output_dir, "node_connectivity.png"))
     else:
-        plt.savefig('node_connectivity.png')
+        plt.savefig("node_connectivity.png")
     plt.close()
 
     # Plot triangulation
@@ -263,21 +260,21 @@ def plot_sample(data_obj, data, output_dir=None):
     triangulation = tri.Triangulation(nodes_x, nodes_y, elements)
 
     plt.figure(figsize=(10, 10))
-    plt.triplot(triangulation, 'go-', alpha=0.5)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title('Triangulation')
-    
+    plt.triplot(triangulation, "go-", alpha=0.5)
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Triangulation")
+
     if output_dir:
-        plt.savefig(os.path.join(output_dir, 'triangulation.png'))
+        plt.savefig(os.path.join(output_dir, "triangulation.png"))
     else:
-        plt.savefig('triangulation.png')
+        plt.savefig("triangulation.png")
     plt.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(f"Reading geometry files from: {GEOMETRY_DIR}")
     print(f"Output will be saved to: {DATA_PROCESSED}")
-    
+
     # Run the parser and prepare node data
     prepare_node_data_for_gnn()

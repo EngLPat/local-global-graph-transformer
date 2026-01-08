@@ -8,8 +8,8 @@ Authors: Luca Patrignani, Silvestre T. Pinho
 Institution: Imperial College London
 """
 
+from .attention import GlobalAttention
 from .fclga_graph_transformer import FCLGA_GraphTransformer
 from .processor_layer import ProcessorLayer
-from .attention import GlobalAttention
 
-__all__ = ['FCLGA_GraphTransformer', 'ProcessorLayer', 'GlobalAttention']
+__all__ = ["FCLGA_GraphTransformer", "ProcessorLayer", "GlobalAttention"]

@@ -15,15 +15,15 @@ Institution: Imperial College London
 
 # Plot resolution and format
 PLOT_DPI = 300
-PLOT_FORMAT = 'pdf'  # or 'svg', 'png'
+PLOT_FORMAT = "pdf"  # or 'svg', 'png'
 
 # Colormaps for different visualizations
-COLORMAP_STRAIN = 'viridis'  # For strain field plots
-COLORMAP_ERROR = 'Reds'  # For error plots
+COLORMAP_STRAIN = "viridis"  # For strain field plots
+COLORMAP_ERROR = "Reds"  # For error plots
 
 # Plot transparency settings
 PLOT_TRANSPARENT_BACKGROUND = False
-PLOT_TEXT_COLOR = 'black'
+PLOT_TEXT_COLOR = "black"
 
 # Figure sizes (inches) - optimized for journal publications
 FIGURE_SIZE_SINGLE = (3.5, 3.0)  # Single column
@@ -32,8 +32,8 @@ FIGURE_SIZE_FULL = (5.0, 3.0)  # Full width
 
 # Font settings for LaTeX rendering
 USE_LATEX = True
-FONT_FAMILY = 'serif'
-FONT_SERIF = ['CMU Serif', 'Computer Modern', 'serif']
+FONT_FAMILY = "serif"
+FONT_SERIF = ["CMU Serif", "Computer Modern", "serif"]
 FONT_SIZE = 11
 
 
@@ -100,36 +100,36 @@ HEXBIN_VMAX = 50  # Maximum count for colorbar
 
 __all__ = [
     # Visualization
-    'PLOT_DPI',
-    'PLOT_FORMAT',
-    'COLORMAP_STRAIN',
-    'COLORMAP_ERROR',
-    'PLOT_TRANSPARENT_BACKGROUND',
-    'PLOT_TEXT_COLOR',
-    'FIGURE_SIZE_SINGLE',
-    'FIGURE_SIZE_DOUBLE',
-    'FIGURE_SIZE_FULL',
-    'USE_LATEX',
-    'FONT_FAMILY',
-    'FONT_SERIF',
-    'FONT_SIZE',
+    "PLOT_DPI",
+    "PLOT_FORMAT",
+    "COLORMAP_STRAIN",
+    "COLORMAP_ERROR",
+    "PLOT_TRANSPARENT_BACKGROUND",
+    "PLOT_TEXT_COLOR",
+    "FIGURE_SIZE_SINGLE",
+    "FIGURE_SIZE_DOUBLE",
+    "FIGURE_SIZE_FULL",
+    "USE_LATEX",
+    "FONT_FAMILY",
+    "FONT_SERIF",
+    "FONT_SIZE",
     # Numerical
-    'ZERO_THRESHOLD',
-    'NORMALIZATION_EPS',
-    'MAX_ACCUMULATIONS',
+    "ZERO_THRESHOLD",
+    "NORMALIZATION_EPS",
+    "MAX_ACCUMULATIONS",
     # Color limits
-    'STRAIN_COLOR_LIMITS',
-    'NOMINAL_ERROR_COLOR_LIMITS',
-    'RELATIVE_ERROR_COLOR_LIMITS',
+    "STRAIN_COLOR_LIMITS",
+    "NOMINAL_ERROR_COLOR_LIMITS",
+    "RELATIVE_ERROR_COLOR_LIMITS",
     # Evaluation
-    'BENCHMARK_NUM_RUNS',
-    'VALIDATION_MISSING_DATA_TOLERANCE',
+    "BENCHMARK_NUM_RUNS",
+    "VALIDATION_MISSING_DATA_TOLERANCE",
     # Data processing
-    'ABAQUS_NODE_OFFSET',
-    'DEFAULT_BATCH_SIZE',
-    'DEFAULT_NUM_WORKERS',
+    "ABAQUS_NODE_OFFSET",
+    "DEFAULT_BATCH_SIZE",
+    "DEFAULT_NUM_WORKERS",
     # Hexbin
-    'HEXBIN_GRIDSIZE',
-    'HEXBIN_MINCNT',
-    'HEXBIN_VMAX',
+    "HEXBIN_GRIDSIZE",
+    "HEXBIN_MINCNT",
+    "HEXBIN_VMAX",
 ]

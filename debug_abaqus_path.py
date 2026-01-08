@@ -1,4 +1,5 @@
 """Debug script to check Abaqus working directory."""
+
 from pathlib import Path
 
 PROJECT_ROOT = Path.cwd()
@@ -15,7 +16,7 @@ if SIMULATIONS_DIR.exists():
     odb_files = sorted(SIMULATIONS_DIR.rglob("*.odb"))
     print(f"Number of ODB files found: {len(odb_files)}")
     if odb_files:
-        print(f"First 5 ODB files:")
+        print("First 5 ODB files:")
         for f in odb_files[:5]:
             print(f"  - {f}")
 else:

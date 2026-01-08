@@ -10,14 +10,14 @@ Author: Luca Patrignani
 Institution: Imperial College London
 """
 
-import torch
-import numpy as np
 import os
 import time
 
+import numpy as np
+import torch
+
 from src.utils.data_utils import unnormalize
 from src.utils.visualization import plot_results
-from config import paths as config_paths
 
 
 class ObjectView:
@@ -188,8 +188,8 @@ def evaluate_model(dataset, model, device, stats_list, postprocess_dir):
     print(f"{'=' * 70}\n")
 
     # Save detailed results
-    results_path = os.path.join(postprocess_dir, 'test_results_detailed.txt')
-    with open(results_path, 'w') as f:
+    results_path = os.path.join(postprocess_dir, "test_results_detailed.txt")
+    with open(results_path, "w") as f:
         f.write("=" * 70 + "\n")
         f.write("TEST SET EVALUATION RESULTS\n")
         f.write("=" * 70 + "\n\n")
@@ -254,7 +254,7 @@ def benchmark_inference(model, dataset, device, stats_list, postprocess_dir, num
         with torch.no_grad():
             _ = model(test_sample, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
 
-    if device == 'cuda':
+    if device == "cuda":
         torch.cuda.synchronize()
 
     # Actual timing runs
@@ -265,7 +265,7 @@ def benchmark_inference(model, dataset, device, stats_list, postprocess_dir, num
         with torch.no_grad():
             _ = model(test_sample, mean_vec_x, std_vec_x, mean_vec_edge, std_vec_edge)
 
-        if device == 'cuda':
+        if device == "cuda":
             torch.cuda.synchronize()
 
     end_time = time.time()
@@ -280,30 +280,26 @@ def benchmark_inference(model, dataset, device, stats_list, postprocess_dir, num
     time_saved = actual_fem_time - avg_inference_time
 
     results = {
-        'avg_inference_time': avg_inference_time,
-        'total_inference_time': total_inference_time,
-        'num_runs': num_runs,
-        'speedup': speedup,
-        'time_saved': time_saved,
-        'fem_time': actual_fem_time
+        "avg_inference_time": avg_inference_time,
+        "total_inference_time": total_inference_time,
+        "num_runs": num_runs,
+        "speedup": speedup,
+        "time_saved": time_saved,
+        "fem_time": actual_fem_time,
     }
 
     # Print results
     print("\nGNN Inference Results:")
     print(
-        f"  Average inference time: {avg_inference_time * 1000:.3f} ms "
-        f"({avg_inference_time:.6f} s)"
+        f"  Average inference time: {avg_inference_time * 1000:.3f} ms ({avg_inference_time:.6f} s)"
     )
     print(f"  Number of runs: {num_runs}")
     print(f"  Total time: {total_inference_time:.3f} seconds")
-    print(
-        f"  Inference frequency: "
-        f"{1 / avg_inference_time:.1f} predictions/second"
-    )
+    print(f"  Inference frequency: {1 / avg_inference_time:.1f} predictions/second")
 
     # Save results to file
-    benchmark_path = os.path.join(postprocess_dir, 'inference_benchmark.txt')
-    with open(benchmark_path, 'w') as f:
+    benchmark_path = os.path.join(postprocess_dir, "inference_benchmark.txt")
+    with open(benchmark_path, "w") as f:
         f.write("=" * 60 + "\n")
         f.write("INFERENCE TIME BENCHMARK\n")
         f.write("=" * 60 + "\n\n")
@@ -315,9 +311,7 @@ def benchmark_inference(model, dataset, device, stats_list, postprocess_dir, num
         f.write(f"  Number of runs: {num_runs}\n")
         f.write(f"  Total time: {total_inference_time:.3f} seconds\n")
         inf_freq = 1 / avg_inference_time
-        f.write(
-            f"  Inference frequency: {inf_freq:.1f} predictions/second\n"
-        )
+        f.write(f"  Inference frequency: {inf_freq:.1f} predictions/second\n")
 
     print(f"\nBenchmark results saved to: {benchmark_path}")
     print("=" * 60 + "\n")

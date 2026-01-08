@@ -14,14 +14,14 @@ import numpy as np
 def calculate_rmse(actual, predicted):
     """
     Calculate Root Mean Square Error.
-    
+
     Parameters
     ----------
     actual : np.ndarray
         Ground truth values
     predicted : np.ndarray
         Predicted values
-        
+
     Returns
     -------
     float
@@ -33,14 +33,14 @@ def calculate_rmse(actual, predicted):
 def calculate_r_squared(actual, predicted):
     """
     Calculate R-squared (coefficient of determination).
-    
+
     Parameters
     ----------
     actual : np.ndarray
         Ground truth values
     predicted : np.ndarray
         Predicted values
-        
+
     Returns
     -------
     float
@@ -54,14 +54,14 @@ def calculate_r_squared(actual, predicted):
 def calculate_mae(actual, predicted):
     """
     Calculate Mean Absolute Error.
-    
+
     Parameters
     ----------
     actual : np.ndarray
         Ground truth values
     predicted : np.ndarray
         Predicted values
-        
+
     Returns
     -------
     float
@@ -73,7 +73,7 @@ def calculate_mae(actual, predicted):
 def calculate_metrics(actual, predicted, filter_zeros=True, threshold=1e-6):
     """
     Calculate comprehensive metrics for regression evaluation.
-    
+
     Parameters
     ----------
     actual : np.ndarray
@@ -84,7 +84,7 @@ def calculate_metrics(actual, predicted, filter_zeros=True, threshold=1e-6):
         Whether to filter out near-zero values (default: True)
     threshold : float, optional
         Threshold for filtering (default: 1e-6)
-        
+
     Returns
     -------
     dict
@@ -97,28 +97,28 @@ def calculate_metrics(actual, predicted, filter_zeros=True, threshold=1e-6):
     else:
         filtered_actual = actual
         filtered_predicted = predicted
-    
+
     if len(filtered_actual) == 0:
         return {
-            'rmse': np.nan,
-            'r_squared': np.nan,
-            'mae': np.nan,
-            'num_points': 0,
-            'filtered_points': 0
+            "rmse": np.nan,
+            "r_squared": np.nan,
+            "mae": np.nan,
+            "num_points": 0,
+            "filtered_points": 0,
         }
-    
+
     return {
-        'rmse': calculate_rmse(filtered_actual, filtered_predicted),
-        'r_squared': calculate_r_squared(filtered_actual, filtered_predicted),
-        'mae': calculate_mae(filtered_actual, filtered_predicted),
-        'num_points': len(actual),
-        'filtered_points': len(filtered_actual)
+        "rmse": calculate_rmse(filtered_actual, filtered_predicted),
+        "r_squared": calculate_r_squared(filtered_actual, filtered_predicted),
+        "mae": calculate_mae(filtered_actual, filtered_predicted),
+        "num_points": len(actual),
+        "filtered_points": len(filtered_actual),
     }
 
 
 __all__ = [
-    'calculate_rmse',
-    'calculate_r_squared',
-    'calculate_mae',
-    'calculate_metrics',
+    "calculate_rmse",
+    "calculate_r_squared",
+    "calculate_mae",
+    "calculate_metrics",
 ]

@@ -16,19 +16,23 @@ import sys
 
 training_run = "results/training_run_20260107_152157"
 
-print("="*80)
+print("=" * 80)
 print("RUNNING TEST WITH AUTO-LOADED HYPERPARAMETERS")
-print("="*80)
+print("=" * 80)
 print(f"Training run: {training_run}\n")
 
 cmd = [
-    sys.executable, "-m", "src.evaluation.fclga_test",
-    "--training_run", training_run,
-    "--visualize_samples", "5"
+    sys.executable,
+    "-m",
+    "src.evaluation.fclga_test",
+    "--training_run",
+    training_run,
+    "--visualize_samples",
+    "5",
 ]
 
 print("Command:")
 print(" ".join(cmd))
-print("\n" + "="*80 + "\n")
+print("\n" + "=" * 80 + "\n")
 
 subprocess.run(cmd)
