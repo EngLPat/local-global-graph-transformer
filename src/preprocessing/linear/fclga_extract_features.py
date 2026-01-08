@@ -142,7 +142,7 @@ def save_triangulation_data(all_data, directory="."):
         triangulation = tri.Triangulation(nodes_x, nodes_y, elements)
         triangulation_data[f'sample_{i}'] = triangulation
 
-    output_path = os.path.join(directory, 'triangulation_data.pkl')
+    output_path = Path(directory) / 'triangulation_data.pkl'
     with open(output_path, 'wb') as file:
         pickle.dump(triangulation_data, file)
 
@@ -230,13 +230,13 @@ def prepare_node_data_for_gnn(directory="."):
     for i, data_obj in enumerate(data_list):
         data_obj.x = torch.tensor(padded_node_features[i], dtype=torch.float)
 
-    # Save node graph data
-    output_file = os.path.join(directory, "node_gnn_data.pt")
+    # Save node graph data to processed directory
+    output_file = DATA_PROCESSED / "node_gnn_data.pt"
     torch.save(data_list, output_file)
     print(f"✓ Node data saved to: {output_file}")
 
     # Save triangulation data for visualization
-    save_triangulation_data(list(zip(parsed_data_list, data_list)), directory)
+    save_triangulation_data(list(zip(parsed_data_list, data_list)), str(DATA_PROCESSED))
     
     print("=" * 80)
     print("FEATURE EXTRACTION COMPLETE")

@@ -35,6 +35,7 @@ from pathlib import Path
 PROJECT_ROOT = Path.cwd()
 GEOMETRY_DIR = PROJECT_ROOT / "data" / "raw" / "linear" / "geometry"
 IMAGES_DIR = PROJECT_ROOT / "data" / "raw" / "linear" / "geometry_images"
+DATA_PROCESSED = PROJECT_ROOT / "data" / "processed" / "linear"
 
 # Create output directories
 GEOMETRY_DIR.mkdir(parents=True, exist_ok=True)
@@ -527,9 +528,10 @@ def generate_samples():
     
     print(f"\n✓ Total models created: {sample_id}")
     
-    # Convert to PyTorch tensor and save
+    # Convert to PyTorch tensor and save to processed directory
+    DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
     geometry_tensor = torch.tensor(geometry_data, dtype=torch.float32)
-    geometry_data_path = GEOMETRY_DIR / "plate_geometry_data.pt"
+    geometry_data_path = DATA_PROCESSED / "plate_geometry_data.pt"
     torch.save(geometry_tensor, str(geometry_data_path))
     print(f"✓ Geometry data saved to {geometry_data_path}")
     print("=" * 80)

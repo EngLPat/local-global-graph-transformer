@@ -31,10 +31,8 @@ def extract_e11_strains(odb_file, field_name='E', component_index=0):
     transforms to global coordinates, and averages integration point
     values to nodes.
     
-    IMPORTANT: This function transforms strains to a global Cartesian
-    coordinate system with origin at (0,0,0). If you use a custom Abaqus
-    macro that already outputs in global coordinates, you may need to
-    skip the transformation step (remove the getTransformedField call).
+    ELASTIC CASE: Uses ELEMENT_NODAL position (Static/Implicit solver).
+    NONLINEAR CASE: Uses INTEGRATION_POINT position (Dynamic/Explicit solver).
     
     Args:
         odb_file: Path to the Abaqus .odb file
@@ -47,19 +45,8 @@ def extract_e11_strains(odb_file, field_name='E', component_index=0):
     """
     try:
         odb = odbAccess.openOdb(odb_file)
-        
-        # Debug: Print step information
-        step_names = odb.steps.keys()
-        print(f"  DEBUG: Available steps: {step_names}")
-        
         step = odb.steps.values()[-1]
-        print(f"  DEBUG: Using step: {step.name}, frames: {len(step.frames)}")
-        
         frame = step.frames[-1]
-        
-        # Debug: Print available field outputs
-        available_fields = frame.fieldOutputs.keys()
-        print(f"  DEBUG: Available field outputs: {available_fields}")
         
         if field_name not in frame.fieldOutputs:
             print(f"  ERROR: Field '{field_name}' not found!")
@@ -67,7 +54,6 @@ def extract_e11_strains(odb_file, field_name='E', component_index=0):
             return []
         
         strain_field = frame.fieldOutputs[field_name]
-        print(f"  DEBUG: Strain field has {len(strain_field.values)} values")
         
         scratchOdb = session.ScratchOdb(odb)  # noqa: F405
         scratchOdb.rootAssembly.DatumCsysByThreePoints(
@@ -81,45 +67,23 @@ def extract_e11_strains(odb_file, field_name='E', component_index=0):
         datumCsys = scratchOdb.rootAssembly.datumCsyses['CSYS-1']
         transformed_field = strain_field.getTransformedField(datumCsys=datumCsys)
         
-        # Debug: Check available positions
-        print(f"  DEBUG: Checking available positions...")
-        print(f"  DEBUG: Total transformed field values: {len(transformed_field.values)}")
-        
-        # Try different positions - elastic uses ELEMENT_NODAL, not INTEGRATION_POINT
+        # Elastic (Static/Implicit) uses ELEMENT_NODAL position
+        # Nonlinear (Dynamic/Explicit) uses INTEGRATION_POINT position
         try:
+            ip_field = transformed_field.getSubset(position=ELEMENT_NODAL)  # noqa: F405
+        except:
+            # Fallback to integration points if ELEMENT_NODAL not available
             ip_field = transformed_field.getSubset(position=INTEGRATION_POINT)  # noqa: F405
-            print(f"  DEBUG: INTEGRATION_POINT field has {len(ip_field.values)} values")
-        except:
-            ip_field = None
-            print(f"  DEBUG: INTEGRATION_POINT not available")
-        
-        try:
-            nodal_field = transformed_field.getSubset(position=ELEMENT_NODAL)  # noqa: F405
-            print(f"  DEBUG: ELEMENT_NODAL field has {len(nodal_field.values)} values")
-            if nodal_field and len(nodal_field.values) > 0:
-                ip_field = nodal_field  # Use nodal values for elastic case
-        except:
-            print(f"  DEBUG: ELEMENT_NODAL not available")
-        
-        if not ip_field or len(ip_field.values) == 0:
-            print(f"  ERROR: No valid field position found!")
-            odb.close()
-            return []
         
         node_strains = {}
         assembly = odb.rootAssembly
         
-        print(f"  DEBUG: Processing {len(assembly.instances.keys())} instances")
-        
         for instance_name in assembly.instances.keys():
             instance = assembly.instances[instance_name]
-            print(f"  DEBUG: Instance '{instance_name}' has {len(instance.elements)} elements")
             
             try:
                 instance_field = ip_field.getSubset(region=instance)
-                print(f"  DEBUG: Instance field has {len(instance_field.values)} values")
-            except Exception as e:
-                print(f"  DEBUG: Failed to get instance field: {e}")
+            except Exception:
                 continue
                 
             for value in instance_field.values:
@@ -134,11 +98,8 @@ def extract_e11_strains(odb_file, field_name='E', component_index=0):
                         if node_label not in node_strains:
                             node_strains[node_label] = []
                         node_strains[node_label].append(strain_value)
-                except Exception as e:
-                    print(f"  DEBUG: Element processing error: {e}")
+                except Exception:
                     continue
-        
-        print(f"  DEBUG: Collected strains for {len(node_strains)} nodes")
         
         e11_strains = {
             node_label: sum(strain_list) / len(strain_list)
@@ -208,31 +169,9 @@ def process_odb_files(input_folder, output_folder):
 
 def main():
     """Main execution function."""
-    # Create log file to capture output
-    log_file = PROJECT_ROOT / "extraction_linear.log"
-    
-    import sys
-    class Logger:
-        def __init__(self, filename):
-            self.terminal = sys.stdout
-            self.log = open(filename, 'w')
-        def write(self, message):
-            self.terminal.write(message)
-            self.log.write(message)
-            self.log.flush()
-        def flush(self):
-            self.terminal.flush()
-            self.log.flush()
-    
-    sys.stdout = Logger(str(log_file))
-    
     print("=" * 80)
     print("ELASTIC CASE: EXTRACTING STRAINS FROM ODB FILES")
     print("=" * 80)
-    print(f"Working directory: {PROJECT_ROOT}")
-    print(f"SIMULATIONS_DIR: {SIMULATIONS_DIR}")
-    print(f"SIMULATIONS_DIR exists: {SIMULATIONS_DIR.exists()}")
-    print()
     
     STRAINS_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Reading ODB files from: {SIMULATIONS_DIR}")
