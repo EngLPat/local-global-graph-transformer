@@ -1,4 +1,4 @@
-Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 12:54:35
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:51:17
 -------------------------------------------------------------------------------
  PREPROCESSOR WARNING MESSAGES
 -------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ element: 88     instance: PLATE-1
 
 
 
-Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 12:54:36
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:51:18
 The entire model is considered 1 domain.
 Only 1 MPI rank is used.
 
@@ -165,8 +165,8 @@ INSTANCE WITH CRITICAL ELEMENT: PLATE-1
 Restart Number  1 at 1.00000E-02
 Output Field Frame Number     1, of      1, at step time 1.000E-02
   EXPLICIT EXECUTABLE TIME SUMMARY
-       USER TIME (SEC)      =   8.3300
-       SYSTEM TIME (SEC)    =  4.00000E-02
+       USER TIME (SEC)      =   8.3100
+       SYSTEM TIME (SEC)    =  5.00000E-02
        WALLCLOCK TIME (SEC) =            8
               INIT (SEC) =          0
               MAIN (SEC) =          8

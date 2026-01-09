@@ -1,0 +1,168 @@
+1
+
+   Abaqus 2024.HF3                                  Date 09-Jan-2026   Time 13:37:29
+   For use by IMPERIAL COLLEGE OF SCIENCE TECHNOLOGY AND MEDICINE under license from Dassault Systemes or its subsidiary.
+
+
+
+                         The Abaqus Software is a product of:
+
+                           Dassault Systemes Americas Corp.
+                           1301 Atwood Avenue, Suite 101W
+                              Johnston, RI 02919, USA
+ 
+
+
+                   The Abaqus Software is available only under license
+                   from Dassault Systemes or its subsidiary and may be
+                   used or reproduced only in accordance with the terms
+                   of such license.
+ 
+                          On machine ic-czc41679gf 
+                          you are authorized to run
+                          Abaqus/Explicit until 31-Jul-2026
+
+                          Your site id is: 200000000048523 
+
+
+ 
+                    For assistance or any other information you may
+                    obtain contact information for your local office
+                    from the world wide web at:
+
+                      https://www.3ds.com/products-services/simulia/services-support/
+
+ 
+                * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+                *                                                         * 
+                *                   *****************                     * 
+                *                   *  N O T I C E  *                     * 
+                *                   *****************                     * 
+                *                                                         * 
+                *                                                         * 
+                *                     Abaqus 2024.HF3                     * 
+                *                                                         * 
+                *       BUILD ID: 2024_05_20-16.43.19 RELr426 191376      * 
+                *                                                         * 
+                *                                                         * 
+                *  Please make sure you are using                         * 
+                *  release Abaqus 2024.HF3 manuals                        * 
+                *  plus the notes accompanying this release.              * 
+                *                                                         * 
+                *                                                         * 
+                *                                                         * 
+                *                                                         * 
+                *                                                         * 
+                *   This program may not be used for commercial purposes  * 
+                *           without payment of a commercial fee.          * 
+                *                                                         * 
+                * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+
+ 
+
+
+
+     PROCESSING PART, INSTANCE, AND ASSEMBLY INFORMATION
+   *******************************************************
+
+
+     END PROCESSING PART, INSTANCE, AND ASSEMBLY INFORMATION
+   ***********************************************************
+
+
+
+
+     OPTIONS BEING PROCESSED
+   ***************************
+
+
+  *Heading
+  *Element, type=S3
+
+ ***NOTE: ELEMENT TYPES S3 AND S3R ARE IDENTICAL. ELEMENT TYPE S3 WILL BE 
+          REFERRED TO AS S3R FROM HERE ON
+  *Elset, elset=ASSEMBLY_PLATE-1_COMPOSITELAYUP-1-1
+  *Elset, elset=ASSEMBLY_SET-1
+  *Elset, elset=ASSEMBLY_SET-2
+  *material, name=ABQ_PLY_FABRIC
+  *density
+  *depvar, delete=16
+  *usermaterial, constants=40
+  *orientation, name=ASSEMBLY_PLATE-1_ORI-1
+  *shellsection, elset=ASSEMBLY_PLATE-1_COMPOSITELAYUP-1-1, layup=COMPOSITELAYUP-1, composite, or
+  *shellsection, elset=ASSEMBLY_PLATE-1_COMPOSITELAYUP-1-1, layup=COMPOSITELAYUP-1, composite, or
+
+ ***WARNING: THERE IS NO TEMPERATURE VARIATION THROUGH THE THICKNESS OF THE 
+             SHELL, BECAUSE ONLY ONE INTEGRATION POINT PER LAYER WAS DEFINED. 
+             THERE IS ONE TEMPERATURE DEGREE OF FREEDOM THROUGH THE ENTIRE 
+             COMPOSITE SHELL SECTION.
+  *boundary
+  *boundary, amplitude=RAMP
+  *elementoutput, position=NODES, directions=YES
+  *output, field, numberinterval=1
+  *output, history, variable=PRESELECT
+  *step, name=Step-1, nlgeom=NO
+
+ ***WARNING: LINEAR GEOMETRIC KINEMATICS OPTION WILL NOT BE SUPPORTED IN FUTURE 
+             for Abaqus/Explicit ANALYSES.  LARGE DEFORMATIONS WILL BE ASSUMED.
+  *step, name=Step-1, nlgeom=NO
+
+ ***WARNING: LINEAR GEOMETRIC KINEMATICS OPTION WILL NOT BE SUPPORTED IN FUTURE 
+             for Abaqus/Explicit ANALYSES.  LARGE DEFORMATIONS WILL BE ASSUMED.
+  *dynamic, explicit
+  *boundary
+  *boundary, amplitude=RAMP
+  *output, field, numberinterval=1
+  *elementoutput, position=NODES, directions=YES
+  *output, history, variable=PRESELECT
+  *endstep
+
+ ***WARNING: OUTPUT REQUEST LE IS NOT AVAILABLE IN A LINEAR STEP -- E (TOTAL 
+             STRAIN) WILL BE OUTPUT INSTEAD.
+
+ ***WARNING: OUTPUT REQUEST LE IS NOT AVAILABLE IN A LINEAR STEP -- E (TOTAL 
+             STRAIN) WILL BE OUTPUT INSTEAD.
+  *step, name=Step-1, nlgeom=NO
+
+ ***WARNING: LINEAR GEOMETRIC KINEMATICS OPTION WILL NOT BE SUPPORTED IN FUTURE 
+             for Abaqus/Explicit ANALYSES.  LARGE DEFORMATIONS WILL BE ASSUMED.
+  *dynamic, explicit
+  *boundary
+
+ ***WARNING: THE OPTION *BOUNDARY,TYPE=DISPLACEMENT HAS BEEN USED; CHECK STATUS 
+             FILE BETWEEN STEPS FOR WARNINGS ON ANY JUMPS PRESCRIBED ACROSS THE 
+             STEPS IN DISPLACEMENT VALUES OF TRANSLATIONAL DOF. FOR ROTATIONAL 
+             DOF MAKE SURE THAT THERE ARE NO SUCH JUMPS. ALL JUMPS IN 
+             DISPLACEMENTS ACROSS STEPS ARE IGNORED
+  *boundary, amplitude=RAMP
+  *endstep
+
+
+
+                            P R O B L E M   S I Z E
+
+
+          NUMBER OF ELEMENTS IS                                  2328
+          NUMBER OF NODES IS                                     1244
+          NUMBER OF NODES DEFINED BY THE USER                    1244
+          TOTAL NUMBER OF VARIABLES IN THE MODEL                 7464
+          (DEGREES OF FREEDOM PLUS MAX NO. OF ANY LAGRANGE MULTIPLIER
+           VARIABLES. INCLUDE *PRINT,SOLVE=YES TO GET THE ACTUAL NUMBER.)
+
+ ***WARNING: AN OUTPUT DATABASE REQUEST THAT REQUIRES THE CALCULATOR HAS BEEN 
+             FOUND.  IF VIEWING THE RESULTS BEFORE THE ANALYSIS IS COMPLETE, 
+             PLEASE RUN THE CALCULATOR MANUALLY USING THE CONVERT=ODB AND 
+             OLDJOB= OPTIONS.
+
+
+
+                              END OF USER INPUT PROCESSING
+
+
+
+     JOB TIME SUMMARY
+       USER TIME (SEC)      =     9.00E-02
+       SYSTEM TIME (SEC)    =     2.00E-02
+       TOTAL CPU TIME (SEC) =     0.11    
+       WALLCLOCK TIME (SEC) =            0

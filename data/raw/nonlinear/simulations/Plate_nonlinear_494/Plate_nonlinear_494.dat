@@ -1,6 +1,6 @@
 1
 
-   Abaqus 2024.HF3                                  Date 09-Jan-2026   Time 12:54:14
+   Abaqus 2024.HF3                                  Date 09-Jan-2026   Time 13:51:03
    For use by IMPERIAL COLLEGE OF SCIENCE TECHNOLOGY AND MEDICINE under license from Dassault Systemes or its subsidiary.
 
 
@@ -162,7 +162,7 @@
 
 
      JOB TIME SUMMARY
-       USER TIME (SEC)      =     6.00E-02
-       SYSTEM TIME (SEC)    =     1.00E-02
-       TOTAL CPU TIME (SEC) =     7.00E-02
+       USER TIME (SEC)      =     9.00E-02
+       SYSTEM TIME (SEC)    =     2.00E-02
+       TOTAL CPU TIME (SEC) =     0.11    
        WALLCLOCK TIME (SEC) =            0

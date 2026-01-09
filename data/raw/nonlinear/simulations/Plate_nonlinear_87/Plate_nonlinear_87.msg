@@ -1,1 +1,3 @@
-*** Error: Abaqus Error: The following file(s) could not be located: /home/lpatrign/HybridAttentionGNN/data/raw/nonlinear/geometry/Plate_nonlinear_87.inp
+
+ STEP 1  ORIGIN 0.0000
+

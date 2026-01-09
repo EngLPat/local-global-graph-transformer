@@ -97,10 +97,6 @@ class FCLGA_GraphTransformer(torch.nn.Module):
             args, "attention_freq", max(1, self.num_layers // 2) if self.num_layers <= 8 else 8
         )
 
-        # Add skip connection projection
-        # self.skip_projection = Linear(hidden_dim, hidden_dim)
-
-        # encoder convert raw inputs into latent embeddings
         self.node_encoder = Sequential(
             Linear(input_dim_node, hidden_dim),
             PReLU(),
@@ -179,31 +175,20 @@ class FCLGA_GraphTransformer(torch.nn.Module):
         x = normalize(x, mean_vec_x, std_vec_x)
         edge_attr = normalize(edge_attr, mean_vec_edge, std_vec_edge)
 
-        # Step 1: encode node/edge features into latent node/edge embeddings
-        x = self.node_encoder(x)  # output shape is the specified hidden dimension
-        edge_attr = self.edge_encoder(edge_attr)  # output shape is the specified hidden dimension
+        x = self.node_encoder(x)
+        edge_attr = self.edge_encoder(edge_attr)
 
-        # Step 2: perform message passing with latent node/edge embeddings
-        # layer_outputs = [x]  # Store layer outputs for skip connections
         for i in range(self.num_layers):
-            # Add skip connection from 8 layers back (keep existing logic)
-            # if i >= 8 and i % 8 == 0:  # Every 8 layers after the 8th
-            #     x = x + self.skip_projection(layer_outputs[i-8])
-
-            # FIXED: Adaptive global attention frequency
             if i % self.attention_freq == 0:
-                # Create batch index if not provided
                 batch = getattr(data, "batch", None)
                 if batch is None:
                     batch = torch.zeros(x.size(0), device=x.device, dtype=torch.long)
 
                 global_info = self.global_attention(x, batch=batch)
-                x = x + 0.2 * global_info  # Mix with local representations
+                x = x + 0.2 * global_info
 
             x, edge_attr = self.processor[i](x, edge_index, edge_attr)
-            # layer_outputs.append(x)  # Store current layer output
 
-        # step 3: decode latent node embeddings into physical quantities of interest
         x = self.decoder(x)
         return x
 

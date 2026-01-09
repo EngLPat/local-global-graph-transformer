@@ -1,4 +1,4 @@
-Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 12:53:54
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:50:41
 -------------------------------------------------------------------------------
  PREPROCESSOR WARNING MESSAGES
 -------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ element: 139     instance: PLATE-1
 
 
 
-Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 12:53:54
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:50:42
 The entire model is considered 1 domain.
 Only 1 MPI rank is used.
 
@@ -173,11 +173,11 @@ INCREMENT     TIME      TIME      TIME     INCREMENT     ELEMENT     ENERGY     
         0  0.000E+00 0.000E+00  00:00:00 5.36633E-07         823  5.396E-03  5.396E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
 Output Field Frame Number     0, of      1, at step time 0.000E+00
-      780  5.003E-04 5.003E-04  00:00:01 6.51148E-07         823  2.540E-01  5.407E-03
+      780  5.003E-04 5.003E-04  00:00:00 6.51148E-07         823  2.540E-01  5.407E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
      1548  1.000E-03 1.000E-03  00:00:01 6.51148E-07         823  2.069E-01  5.387E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
-     2316  1.500E-03 1.500E-03  00:00:02 6.51148E-07         823  1.296E-01  5.374E-03
+     2316  1.500E-03 1.500E-03  00:00:01 6.51148E-07         823  1.296E-01  5.374E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
      3084  2.001E-03 2.001E-03  00:00:02 6.51148E-07         823  3.519E-01  5.368E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
@@ -193,7 +193,7 @@ INSTANCE WITH CRITICAL ELEMENT: PLATE-1
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
      7694  5.002E-03 5.002E-03  00:00:04 6.51148E-07         823  1.775E-01  5.446E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
-     8463  5.503E-03 5.503E-03  00:00:04 6.51148E-07         823  9.381E-02  5.478E-03
+     8463  5.503E-03 5.503E-03  00:00:05 6.51148E-07         823  9.381E-02  5.478E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
      9232  6.004E-03 6.004E-03  00:00:05 6.51148E-07         823  3.389E-01  5.565E-03
 INSTANCE WITH CRITICAL ELEMENT: PLATE-1
@@ -216,8 +216,8 @@ INSTANCE WITH CRITICAL ELEMENT: PLATE-1
 Restart Number  1 at 1.00000E-02
 Output Field Frame Number     1, of      1, at step time 1.000E-02
   EXPLICIT EXECUTABLE TIME SUMMARY
-       USER TIME (SEC)      =   7.5200
-       SYSTEM TIME (SEC)    =  4.00000E-02
+       USER TIME (SEC)      =   7.9700
+       SYSTEM TIME (SEC)    =  5.00000E-02
        WALLCLOCK TIME (SEC) =            8
               INIT (SEC) =          0
               MAIN (SEC) =          8

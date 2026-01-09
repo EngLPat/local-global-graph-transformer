@@ -1,0 +1,183 @@
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:36:40
+-------------------------------------------------------------------------------
+ PREPROCESSOR WARNING MESSAGES
+-------------------------------------------------------------------------------
+
+
+***WARNING: There are 7 warning messages in the data (.dat) file.  Please
+            check the data file for possible errors in the input file.
+
+
+-------------------------------------------------------------------------------
+ NUMERICAL PRECISION USED FOR THIS Abaqus/Explicit ANALYSIS
+-------------------------------------------------------------------------------
+
+Single precision package and explicit executables will be used in this analysis.
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+CRITICAL ELEMENT LENGTH INFORMATION FOR MATERIAL ABQ_PLY_FABRIC
+-------------------------------------------------------------------------------
+
+   Failure Mode:         Critical length:
+   Fiber 1 tension          3.0813
+   Fiber 1 compression       3.0044
+   Fiber 2 tension          3.0813
+   Fiber 2 compression       3.0044
+
+   Overall critical length: 3.0044
+
+***WARNING: Some elements exceed the critical length of 3.0044 for material
+            ABQ_PLY_FABRIC. This may lead to sudden failure of these elements
+            and incorrect damage dissipation.
+
+Elements exceeding the critical length include the following:
+element: 20     instance: PLATE-1
+element: 21     instance: PLATE-1
+element: 22     instance: PLATE-1
+element: 26     instance: PLATE-1
+element: 31     instance: PLATE-1
+element: 32     instance: PLATE-1
+element: 34     instance: PLATE-1
+element: 53     instance: PLATE-1
+element: 54     instance: PLATE-1
+element: 55     instance: PLATE-1
+element: 56     instance: PLATE-1
+element: 58     instance: PLATE-1
+element: 66     instance: PLATE-1
+element: 103     instance: PLATE-1
+element: 105     instance: PLATE-1
+element: 109     instance: PLATE-1
+element: 111     instance: PLATE-1
+
+-------------------------------------------------------------------------------
+ MODEL INFORMATION (IN GLOBAL X-Y COORDINATES)
+-------------------------------------------------------------------------------
+
+   Total mass in model = 3.10616E-05
+   Center of mass of model = ( 5.407606E+01, 9.374577E+01, 0.000000E+00)
+
+    Moments of Inertia :
+                 About Center of Mass              About Origin
+      I(XX)          9.426191E-02                  3.672398E-01
+      I(YY)          3.140758E-02                  1.222386E-01
+      I(ZZ)          1.256119E-01                  4.894209E-01
+      I(XY)          6.730193E-06                 -1.574571E-01
+      I(YZ)          0.000000E+00                  0.000000E+00
+      I(ZX)          0.000000E+00                  0.000000E+00
+
+-------------------------------------------------------------------------------
+ STABLE TIME INCREMENT INFORMATION
+-------------------------------------------------------------------------------
+
+
+  The stable time increment estimate for each element is based on
+  linearization about the initial state.
+
+
+   Initial time increment = 4.67770E-07
+
+   Statistics for all elements:
+      Mean = 7.53737E-07
+      Standard deviation = 5.56756E-08
+
+   Most critical elements:
+    Element number   Rank    Time increment   Increment ratio
+    (Instance name)
+   ----------------------------------------------------------
+         534          1       4.677704E-07      1.000000E+00
+    PLATE-1
+         600          2       4.714725E-07      9.921478E-01
+    PLATE-1
+         557          3       5.280176E-07      8.858992E-01
+    PLATE-1
+         583          4       5.375298E-07      8.702222E-01
+    PLATE-1
+         581          5       5.492572E-07      8.516418E-01
+    PLATE-1
+         591          6       5.560466E-07      8.412432E-01
+    PLATE-1
+         606          7       5.671500E-07      8.247737E-01
+    PLATE-1
+        1099          8       5.673992E-07      8.244115E-01
+    PLATE-1
+         522          9       5.701594E-07      8.204203E-01
+    PLATE-1
+        1335         10       5.706075E-07      8.197762E-01
+    PLATE-1
+
+
+  Instance name for the most critical element will be printed if the critical
+  element changes or at the beginning of a new page.
+
+
+
+Abaqus/Explicit 2024.HF3                         DATE 09-Jan-2026  TIME 13:36:40
+The entire model is considered 1 domain.
+Only 1 MPI rank is used.
+
+-------------------------------------------------------------------------------
+ SOLUTION PROGRESS
+-------------------------------------------------------------------------------
+
+ STEP 1  ORIGIN 0.0000
+
+  Total memory used for step 1 is approximately 6.7 megabytes.
+  Global time estimation algorithm will be used.
+  Scaling factor:  1.0000
+              STEP     TOTAL      WALL        STABLE    CRITICAL    KINETIC      TOTAL
+INCREMENT     TIME      TIME      TIME     INCREMENT     ELEMENT     ENERGY     ENERGY
+        0  0.000E+00 0.000E+00  00:00:00 4.67770E-07         534  4.241E-03  4.241E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+Output Field Frame Number     0, of      1, at step time 0.000E+00
+      871  5.005E-04 5.005E-04  00:00:01 5.77865E-07         534  1.002E-01  4.224E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     1737  1.001E-03 1.001E-03  00:00:01 5.77865E-07         534  1.682E-01  4.198E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     2603  1.501E-03 1.501E-03  00:00:02 5.77865E-07         534  1.265E-01  4.200E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     3469  2.002E-03 2.002E-03  00:00:02 5.77865E-07         534  8.194E-02  4.182E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     4335  2.502E-03 2.502E-03  00:00:03 5.77865E-07         534  1.002E-01  4.197E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     5201  3.003E-03 3.003E-03  00:00:03 5.77865E-07         534  1.479E-01  4.180E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     6067  3.503E-03 3.503E-03  00:00:04 5.77865E-07         534  1.512E-01  4.181E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     6933  4.004E-03 4.004E-03  00:00:04 5.77865E-07         534  6.439E-02  4.187E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     7799  4.504E-03 4.504E-03  00:00:05 5.77865E-07         534  6.861E-02  4.215E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     8665  5.005E-03 5.005E-03  00:00:05 5.77865E-07         534  9.551E-02  4.241E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+     9531  5.505E-03 5.505E-03  00:00:06 5.77865E-07         534  1.326E-01  4.278E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    10397  6.005E-03 6.005E-03  00:00:06 5.77865E-07         534  8.967E-02  4.251E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    11263  6.506E-03 6.506E-03  00:00:06 5.77865E-07         534  6.065E-02  4.313E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    12129  7.006E-03 7.006E-03  00:00:07 5.77865E-07         534  7.730E-02  4.470E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    12995  7.507E-03 7.507E-03  00:00:07 5.77865E-07         534  1.287E-01  4.506E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    13861  8.007E-03 8.007E-03  00:00:08 5.77865E-07         534  9.958E-02  4.271E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    14727  8.507E-03 8.507E-03  00:00:08 5.77865E-07         534  8.097E-02  4.020E-03
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    15593  9.007E-03 9.007E-03  00:00:09 5.77865E-07         534  2.558E+01  5.403E-01
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    16459  9.507E-03 9.507E-03  00:00:09 5.77865E-07         534  1.680E+01  1.099E-01
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+    17313  1.000E-02 1.000E-02  00:00:09 5.77865E-07         534  9.084E+00  3.552E-02
+INSTANCE WITH CRITICAL ELEMENT: PLATE-1
+Restart Number  1 at 1.00000E-02
+Output Field Frame Number     1, of      1, at step time 1.000E-02
+  EXPLICIT EXECUTABLE TIME SUMMARY
+       USER TIME (SEC)      =   9.0800
+       SYSTEM TIME (SEC)    =  4.00000E-02
+       WALLCLOCK TIME (SEC) =            9
+              INIT (SEC) =          0
+              MAIN (SEC) =          9
+
+  THE ANALYSIS HAS COMPLETED SUCCESSFULLY
+

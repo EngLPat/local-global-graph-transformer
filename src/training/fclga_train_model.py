@@ -1,30 +1,21 @@
-"""
-*******************************************************************************
-*                                                                             *
-*   AUTHOR: Luca Patrignani - PhD candidate Imperial College London           *
-*   TITLE: FCLGA GraphTransformer Training and Testing                        *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*  Description:                                                               *
-*  ============                                                               *
-*  This Python script was meticulously crafted to design and develop a GNN    *
-*  to solve a mesh graph problem using PyTorch and PyTorch Geometric.         *
-*  This version implements the FCLGA GraphTransformer model with advanced     *
-*  attention mechanisms and message passing for structural mechanics.          *
-*                                                                             *
-*  Rights:                                                                    *
-*  ======                                                                     *
-*  All rights to this code are reserved.                                      *
-*                                                                             *
-*******************************************************************************
+"""FCLGA GraphTransformer - Model Training Script
+
+Command-line interface for training FCLGA GraphTransformer models with
+Optuna hyperparameter optimization.
+
+Usage:
+    python -m src.training.fclga_train_model --material_type nonlinear
+    python -m src.training.fclga_train_model \
+        --material_type linear \
+        --optuna_trials 50 \
+        --epochs 500
+
+Authors: Luca Patrignani, Silvestre T. Pinho
+Institution: Imperial College London
 """
 
 import argparse
 import copy
-
-# import h5py  # Commented out - not used
-# import tensorflow.compat.v1 as tf  # Commented out - not used
 import json
 import math
 import os
@@ -59,9 +50,8 @@ def run_optuna_optimization(args):
     import optuna
     from optuna.visualization import plot_optimization_history, plot_param_importances
 
-    # LEGACY: Set up global directories for train() function (same as legacy module-level setup)
     global checkpoint_dir, postprocess_dir
-    results_folder = create_results_folder()
+    results_folder = create_results_folder(material_type=args.material_type)
     checkpoint_dir = os.path.join(results_folder, "best_models")
     postprocess_dir = os.path.join(results_folder, "training_results")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -81,8 +71,8 @@ def run_optuna_optimization(args):
     )
 
     def objective(trial):
-        # Set seeds for reproducibility within each trial (LEGACY LOGIC)
-        torch.manual_seed(42 + trial.number)  # Different seed per trial
+        # Set seeds for reproducibility within each trial
+        torch.manual_seed(42 + trial.number)
         random.seed(42 + trial.number)
         np.random.seed(42 + trial.number)
 
@@ -110,7 +100,7 @@ def run_optuna_optimization(args):
             "save_best_model": False,  # Don't save during optimization
         }
 
-        # LEGACY: Memory constraint
+        # Memory constraint
         if trial_args["hidden_dim"] > 64 and trial_args["batch_size"] > 8:
             trial_args["num_layers"] = min(trial_args["num_layers"], 6)
 
@@ -138,7 +128,7 @@ def run_optuna_optimization(args):
             trial_args_obj.val_size = val_size
             trial_args_obj.test_size = total_size - train_size - val_size
 
-            # LEGACY: Get statistics for normalization (only use training data)
+            # Get statistics for normalization (only use training data)
             stats_list = get_stats(train_dataset)
 
             # Train model
@@ -223,17 +213,16 @@ def run_optuna_optimization(args):
 
     print("=" * 80)
 
-    # LEGACY: Train final model with best hyperparameters if requested
+    # Train final model with best hyperparameters if requested
     if args.final_epochs is not None:
         print("\n" + "=" * 80)
         print("TRAINING FINAL MODEL WITH BEST HYPERPARAMETERS")
         print("=" * 80)
         print(f"Epochs: {args.final_epochs}")
 
-        # LEGACY: Start with all trial params (like create_best_params_from_trial)
         best_params = study.best_params.copy()
 
-        # LEGACY: Reconstruct attention_freq if not in params (happens when num_layers <= 4)
+        # Reconstruct attention_freq if not in params (happens when num_layers <= 4)
         if "attention_freq" not in best_params:
             num_layers = best_params["num_layers"]
             if num_layers <= 4:
@@ -256,6 +245,9 @@ def run_optuna_optimization(args):
                 "shuffle": True,
                 "save_velo_val": True,
                 "save_best_model": True,
+                "train_ratio": args.train_ratio,
+                "val_ratio": args.val_ratio,
+                "test_ratio": args.test_ratio,
             }
         )
 
