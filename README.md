@@ -1,6 +1,10 @@
 ﻿# FCLGA GraphTransformer
 
-Graph Neural Network with Hybrid Local-Global Attention for predicting mechanical response in structures with holes.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Graph Neural Network with Hybrid Local-Global Attention for predicting mechanical response in structures.
 
 **Paper:** "Graph Neural Networks with Hybrid Local-Global Attention for Effective Prediction of Mechanical Response in Structures"  
 **Authors:** Luca Patrignani, Silvestre T. Pinho | Imperial College London
@@ -43,7 +47,7 @@ HybridAttentionGNN/
 ## Requirements
 
 - **Python 3.10+** with PyTorch 2.0+, PyTorch Geometric
-- **Abaqus** (for FEA simulations only - not needed if using preprocessed data)
+- **Abaqus**
 - **CUDA GPU** (recommended for training)
 
 ## Installation
