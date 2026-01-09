@@ -127,3 +127,4 @@ optuna_studies/
 *.synctex.gz
 *.bbl
 *.blg
+legacy/processed_data.pt
