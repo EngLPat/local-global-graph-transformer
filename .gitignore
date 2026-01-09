@@ -134,3 +134,4 @@ legacy/processed_data.pt
 debug_*.py
 quick_test.py
 .config_changes.md
+/train_linear.log
