@@ -198,7 +198,7 @@ See [notebooks/README.md](notebooks/README.md) for detailed usage instructions.
          Prediction of Mechanical Response in Structures},
   author={Patrignani, Luca and Pinho, Silvestre T.},
   journal={Computer Methods in Applied Mechanics and Engineering},
-  year={2025}
+  year={2026}
 }
 ```
 
