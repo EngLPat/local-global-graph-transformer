@@ -46,8 +46,12 @@ dependencies:
   # Utilities
   - python-dateutil
 
-  # Additional packages via pip (if not available in conda)
+  # PyTorch and PyTorch Geometric (via pip for better compatibility)
   - pip
+  - pip:
+    - torch>=2.0.0
+    - torch-geometric>=2.3.0
+    - optuna>=3.0.0
   - pip:
     - torch>=2.0.0
     - torchvision

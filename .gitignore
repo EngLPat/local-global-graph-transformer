@@ -128,3 +128,9 @@ optuna_studies/
 *.bbl
 *.blg
 legacy/processed_data.pt
+
+# Temporary logs and debug files
+*.log
+debug_*.py
+quick_test.py
+.config_changes.md

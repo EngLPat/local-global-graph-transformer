@@ -13,7 +13,7 @@ All 7 reviewer requirements for code reproducibility have been addressed:
 | # | Requirement | Status | Files Created/Updated |
 |---|-------------|--------|-----------------------|
 | 1 | **Detailed README** | ✅ DONE | README.md updated with notebook section |
-| 2 | **Abaqus Integration** | ✅ DONE | docs/MATERIAL_PROPERTY_CARD.md, docs/ABAQUS_SETUP.md |
+| 2 | **Abaqus Integration** | ✅ DONE | docs/MATERIAL_PROPERTY_CARD.md, ABAQUS_SETUP.md (root) |
 | 3 | **Data Generation** | ✅ DONE | config/defaults.yaml documents all parameters |
 | 4 | **Training Config** | ✅ DONE | Seeds verified in training script |
 | 5 | **Model Checkpoints** | ✅ DONE | Multiple models in results/nonlinear/ |
@@ -183,7 +183,7 @@ HybridAttentionGNN/
 │   ├── REVIEWER_REQUIREMENTS_COMPLIANCE.md  # NEW! - Detailed compliance
 │   ├── MATERIAL_PROPERTY_CARD.md         # Created earlier
 │   ├── PUBLICATION_CHECKLIST.md          # Updated to 10/10
-│   └── ABAQUS_SETUP.md                   # Complete Abaqus docs
+├── ABAQUS_SETUP.md                      # Complete Abaqus FEA documentation
 ├── README.md                              # Updated with notebook section
 ├── environment.yml                        # Conda environment
 ├── requirements.txt                       # pip dependencies

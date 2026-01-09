@@ -34,11 +34,10 @@ HybridAttentionGNN/
 │   └── training_*_TIMESTAMP/
 │       ├── best_models/       # Saved checkpoints
 │       └── training_results/  # Loss curves, hyperparameters
-├── notebooks/                 # Jupyter notebooks reproducing key figures
-│   ├── 01_nonlinear_demo.ipynb
-│   ├── 02_linear_demo.ipynb
-│   └── README.md
-└── scripts/                   # Utility scripts and pipeline tools
+└── notebooks/                 # Jupyter notebooks reproducing key figures
+    ├── 01_nonlinear_demo.ipynb
+    ├── 02_linear_demo.ipynb
+    └── README.md
 ```
 
 ## Requirements
@@ -180,6 +179,7 @@ See [notebooks/README.md](notebooks/README.md) for detailed usage instructions.
 
 ## Key Files
 
+- **[`ABAQUS_SETUP.md`](ABAQUS_SETUP.md)**: Complete Abaqus FEA documentation (material properties, solver settings, reproducibility)
 - **[`config/defaults.yaml`](config/defaults.yaml)**: Edit geometry ranges, material properties, simulation workers, training hyperparameters
 - **[`config/paths.py`](config/paths.py)**: Automatic path management for linear/nonlinear separation
 - **[`src/models/fclga_graph_transformer.py`](src/models/fclga_graph_transformer.py)**: Model architecture
