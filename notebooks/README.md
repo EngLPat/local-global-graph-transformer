@@ -5,7 +5,6 @@ This directory contains Jupyter notebooks demonstrating the trained models and r
 ## 📓 Available Notebooks
 
 ### 1. [01_nonlinear_demo.ipynb](01_nonlinear_demo.ipynb)
-**Primary demonstration notebook** for nonlinear (plastic) composite materials.
 
 **Contents:**
 - Load pretrained FCLGA GraphTransformer
@@ -13,9 +12,9 @@ This directory contains Jupyter notebooks demonstrating the trained models and r
 - Visualize strain field predictions
 - Compute error metrics (RMSE, MAPE)
 - Error distribution analysis
-- Reproduces paper Figures 5-7
+- Reproduces paper Results Figures
 
-**Material:** Plastic laminate with progressive damage (UMAT)  
+**Material:** nonlinear with progressive damage (UMAT)  
 **Solver:** Dynamic/Explicit  
 **Dataset:** 500 samples, 1-3mm displacement
 
@@ -28,7 +27,7 @@ This directory contains Jupyter notebooks demonstrating the trained models and r
 - Comparison with nonlinear case
 - Material-specific insights
 
-**Material:** Elastic fabric composite  
+**Material:** Linear Elastic  
 **Solver:** Static/Implicit  
 **Dataset:** 500 samples, 1-2mm displacement
 
@@ -53,7 +52,6 @@ This directory contains Jupyter notebooks demonstrating the trained models and r
 3. **Trained model:**
    - Nonlinear: Must have completed training for nonlinear case
    - Linear: Must have completed training for linear case (optional)
-   - See [QUICKSTART.md](../QUICKSTART.md) for training instructions
 
 ### Running Notebooks
 
@@ -103,36 +101,6 @@ Copy the full path to the notebook.
 
 ---
 
-## 📊 Expected Outputs
-
-### Figures Generated
-
-Each notebook generates high-resolution figures (300 DPI):
-
-**01_nonlinear_demo.ipynb:**
-- `nonlinear_sample_0.png` - Strain field comparison (GT | Prediction | Error)
-- `nonlinear_error_distribution.png` - RMSE/MAPE histograms
-
-**02_linear_demo.ipynb:**
-- `linear_sample_0.png` - Strain field comparison
-- Similar error analysis plots
-
-### Console Output
-
-Typical test set results:
-```
-========================================================
-TEST SET RESULTS (Nonlinear)
-========================================================
-Mean RMSE: 0.000123 ± 0.000045
-Mean MAPE: 3.45% ± 1.23%
-Median RMSE: 0.000115
-Median MAPE: 3.21%
-========================================================
-```
-
----
-
 ## 🔧 Troubleshooting
 
 ### Issue: Kernel not found
@@ -153,86 +121,13 @@ sys.path.insert(0, str(project_root))
 
 ### Issue: CUDA out of memory
 ```python
-# Use CPU instead
+# Use CPU instead (not recommended)
 device = torch.device('cpu')
 ```
 
-Or reduce batch processing in evaluation cells.
+Or reduce batch processing in evaluation cells. (recommended)
 
 ### Issue: Model file not found
 1. Verify training completed successfully
 2. Check `results/` directory structure
 3. Update `model_path` variable with absolute path
-
----
-
-## 📝 Notes for Reviewers
-
-These notebooks address **Reviewer Requirement #6**:
-
-> *"Jupyter notebooks or scripts that reproduce key figures and results from the paper for independent verification."*
-
-### Reproducibility Checklist
-
-- ✅ **Random seeds:** Controlled in training scripts (see lines 85-87, 271-273 in [fclga_train_model.py](../src/training/fclga_train_model.py))
-- ✅ **Data splits:** 70/15/15 (train/val/test) with fixed indices
-- ✅ **Model checkpoints:** Available in `results/` after training
-- ✅ **Environment:** Fully specified in `environment.yml`
-- ✅ **Figures:** Generated at 300 DPI for publication quality
-
-### Key Figures Reproduced
-
-| Figure | Notebook | Cell | Description |
-|--------|----------|------|-------------|
-| Fig. 5 | 01_nonlinear | Cell 7 | Strain field comparison (GT vs Prediction) |
-| Fig. 6 | 01_nonlinear | Cell 10 | Error distribution histograms |
-| Fig. 7 | 01_nonlinear | Cell 8 | Full test set RMSE/MAPE |
-| Fig. 8 | 02_linear | Cell 6 | Linear elastic case results |
-
-### Independent Verification
-
-To reproduce results from scratch:
-1. Follow [SETUP_GUIDE.md](../SETUP_GUIDE.md) for environment
-2. Run preprocessing pipeline (see [QUICKSTART.md](../QUICKSTART.md))
-3. Train model: `python -m scripts.fclga_train --material_type nonlinear --optimize`
-4. Run notebooks with your trained model
-5. Compare metrics with paper Table 2
-
-**Expected variability:** ±5% due to randomness in Optuna trials (even with fixed seeds).
-
----
-
-## 📚 Additional Resources
-
-- **Main README:** [../README.md](../README.md)
-- **Quick Start Guide:** [../QUICKSTART.md](../QUICKSTART.md)
-- **Training Details:** [../src/training/README.md](../src/training/README.md)
-- **Model Architecture:** [../src/models/fclga_graph_transformer.py](../src/models/fclga_graph_transformer.py)
-- **Publication Checklist:** [../docs/PUBLICATION_CHECKLIST.md](../docs/PUBLICATION_CHECKLIST.md)
-
----
-
-## 🤝 Citation
-
-If you use these notebooks or the FCLGA model, please cite:
-
-```bibtex
-@article{your_paper_2024,
-  title={Frequency-Controlled Local-Global Attention Graph Transformer for Composite Damage Prediction},
-  author={Your Name et al.},
-  journal={Computer Methods in Applied Mechanics and Engineering},
-  year={2024}
-}
-```
-
-See [../CITATION.md](../CITATION.md) for full citation details including MeshGraphNets acknowledgment.
-
----
-
-## ✉️ Contact
-
-For questions about the notebooks:
-- Open an issue on GitHub
-- Contact: [your.email@institution.edu]
-
-**Last updated:** January 2026

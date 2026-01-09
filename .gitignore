@@ -130,6 +130,8 @@ optuna_studies/
 legacy/processed_data.pt
 
 # Temporary logs and debug files
+!notebooks/train_nonlinear.log
+!notebooks/train_linear.log
 *.log
 debug_*.py
 quick_test.py

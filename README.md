@@ -79,22 +79,22 @@ Generate 500 samples with varying geometry and loads:
 
 ```bash
 # === NONLINEAR (default) ===
-# 1. Generate 500 geometries (~5 min)
+# 1. Generate 500 geometries
 abaqus cae nogui=src/preprocessing/nonlinear/fclga_generate_geometry.py
 
-# 2. Run simulations in parallel (~1-4 hours, configure workers in config/defaults.yaml line 77)
+# 2. Run simulations in parallel (configure workers in config/defaults.yaml line 80)
 python -m src.preprocessing.nonlinear.fclga_run_simulations
 
-# 3. Extract strains from ODB files (~10 min)
+# 3. Extract strains from ODB files
 abaqus cae nogui=src/preprocessing/nonlinear/fclga_extract_results.py
 
-# 4. Extract graph features (~5 min)
+# 4. Extract graph features
 python -m src.preprocessing.nonlinear.fclga_extract_features
 
-# 5. Build strain dataset (~2 min)
+# 5. Build strain dataset
 python -m src.preprocessing.nonlinear.fclga_build_dataset
 
-# 6. Prepare training data (~5 min)
+# 6. Prepare training data
 python -m src.preprocessing.nonlinear.fclga_prepare_training_data
 
 # === LINEAR (elastic) ===
@@ -107,7 +107,7 @@ python -m src.preprocessing.linear.fclga_build_dataset
 python -m src.preprocessing.linear.fclga_prepare_training_data
 ```
 
-**Configuration:** Edit [`config/defaults.yaml`](config/defaults.yaml) line 77 to change parallel simulation workers (default: 4).
+**Configuration:** Edit [`config/defaults.yaml`](config/defaults.yaml) line 80 to change parallel simulation workers (default: 4).
 
 ### Training
 
@@ -192,7 +192,7 @@ See [notebooks/README.md](notebooks/README.md) for detailed usage instructions.
 ## Citation
 
 ```bibtex
-@article{patrignani2025hybrid,
+@article{patrignani2026hybrid,
   title={Graph Neural Networks with Hybrid Local-Global Attention for Effective 
          Prediction of Mechanical Response in Structures},
   author={Patrignani, Luca and Pinho, Silvestre T.},
