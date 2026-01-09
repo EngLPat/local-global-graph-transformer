@@ -1,0 +1,89 @@
+======================================================================
+TEST SET EVALUATION RESULTS
+======================================================================
+
+Number of test samples: 75
+Mean Test Loss: 0.45632
+
+--- RMSE METRICS ---
+Global RMSE (all nodes, all samples): 0.00710585
+Mean of per-sample RMSEs: 0.00475633
+RMSE Std Dev: 0.00525221
+RMSE Range: [0.00057883, 0.02856957]
+
+Individual Sample RMSEs:
+  Sample 0: 0.00202321
+  Sample 1: 0.00530780
+  Sample 2: 0.00123609
+  Sample 3: 0.00221600
+  Sample 4: 0.00167749
+  Sample 5: 0.01127810
+  Sample 6: 0.00156901
+  Sample 7: 0.00438532
+  Sample 8: 0.00071188
+  Sample 9: 0.00118886
+  Sample 10: 0.00103900
+  Sample 11: 0.00183700
+  Sample 12: 0.01123483
+  Sample 13: 0.00149308
+  Sample 14: 0.00106086
+  Sample 15: 0.00126748
+  Sample 16: 0.00503504
+  Sample 17: 0.00432002
+  Sample 18: 0.00057883
+  Sample 19: 0.00182768
+  Sample 20: 0.00116925
+  Sample 21: 0.00148950
+  Sample 22: 0.00435777
+  Sample 23: 0.00184042
+  Sample 24: 0.00208136
+  Sample 25: 0.00098450
+  Sample 26: 0.00458301
+  Sample 27: 0.01056905
+  Sample 28: 0.01054579
+  Sample 29: 0.00450570
+  Sample 30: 0.02093777
+  Sample 31: 0.00418924
+  Sample 32: 0.00065818
+  Sample 33: 0.00199392
+  Sample 34: 0.01918389
+  Sample 35: 0.00128305
+  Sample 36: 0.00186328
+  Sample 37: 0.01827303
+  Sample 38: 0.00144109
+  Sample 39: 0.00241972
+  Sample 40: 0.00141403
+  Sample 41: 0.00783883
+  Sample 42: 0.00121413
+  Sample 43: 0.00248972
+  Sample 44: 0.00606079
+  Sample 45: 0.00125899
+  Sample 46: 0.01283204
+  Sample 47: 0.00893876
+  Sample 48: 0.00333884
+  Sample 49: 0.00279653
+  Sample 50: 0.00177916
+  Sample 51: 0.00458436
+  Sample 52: 0.00282469
+  Sample 53: 0.00183039
+  Sample 54: 0.00081395
+  Sample 55: 0.00605572
+  Sample 56: 0.00273776
+  Sample 57: 0.00404592
+  Sample 58: 0.00386874
+  Sample 59: 0.00210749
+  Sample 60: 0.02856957
+  Sample 61: 0.00343711
+  Sample 62: 0.00381159
+  Sample 63: 0.00599094
+  Sample 64: 0.00121558
+  Sample 65: 0.00333800
+  Sample 66: 0.01180765
+  Sample 67: 0.00103518
+  Sample 68: 0.00271186
+  Sample 69: 0.00406838
+  Sample 70: 0.00335693
+  Sample 71: 0.00119347
+  Sample 72: 0.01270321
+  Sample 73: 0.00632968
+  Sample 74: 0.01266786

@@ -38,7 +38,7 @@ HybridAttentionGNN/
 │   ├── 01_nonlinear_demo.ipynb
 │   ├── 02_linear_demo.ipynb
 │   └── README.md
-└── scripts/                   # Legacy entry points
+└── scripts/                   # Utility scripts and pipeline tools
 ```
 
 ## Requirements

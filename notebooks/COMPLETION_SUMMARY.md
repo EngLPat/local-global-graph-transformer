@@ -86,7 +86,7 @@ Created today to address **Requirement #6**:
 
 5. **[pyproject.toml](../pyproject.toml)** (created earlier)
    - Ruff configuration for research code
-   - Excludes legacy/, allows Abaqus patterns
+   - Pattern exclusions for Abaqus files
 
 6. **[CITATION.md](../CITATION.md)** (created earlier)
    - MeshGraphNets acknowledgment

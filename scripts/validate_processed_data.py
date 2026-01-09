@@ -522,10 +522,10 @@ NOTES:
     return issues
 
 
-def compare_with_legacy_dataset(data):
-    """Compare current dataset structure with expected legacy format."""
+def compare_with_expected_format(data):
+    """Compare current dataset structure with expected format."""
     print(f"\n{'=' * 60}")
-    print("COMPARING WITH LEGACY FORMAT")
+    print("COMPARING WITH EXPECTED FORMAT")
     print(f"{'=' * 60}\n")
 
     sample = data["node_gnn_data"][0]
@@ -693,8 +693,8 @@ def main():
     # Validate consistency
     is_consistent = validate_data_consistency(data)
 
-    # Compare with legacy format
-    compare_with_legacy_dataset(data)
+    # Compare with expected format
+    compare_with_expected_format(data)
 
     if args.no_plots:
         print("Skipping plots (--no-plots flag set)")

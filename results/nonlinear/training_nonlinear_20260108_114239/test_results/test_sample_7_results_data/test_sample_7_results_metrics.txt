@@ -1,0 +1,11 @@
+Regression Metrics (Filtered Data)
+===================================
+Total data points: 1261
+Filtered data points: 1214
+Threshold used: 1e-06
+R-squared (R²): 0.872347
+RMSE: 0.00139980
+Min actual strain: 0.00527442
+Max actual strain: 0.04015169
+Mean actual strain: 0.01312422
+Mean predicted strain: 0.01312245

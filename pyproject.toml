@@ -10,12 +10,10 @@ license = {text = "MIT"}
 requires-python = ">=3.10"
 
 [tool.ruff]
-# Exclude auto-generated and legacy files
+# Exclude auto-generated files and build artifacts
 exclude = [
     ".git",
     "__pycache__",
-    "legacy",
-    "legacy_elastic",
     "*.egg-info",
     ".venv",
     "venv",

@@ -1,1 +1,11 @@
+# Git LFS configuration for large binary files
+
+# Video files
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# Processed datasets (PyTorch tensors - typically 50-200MB)
+data/processed/*.pt filter=lfs diff=lfs merge=lfs -text
+data/processed/*/datasets/*.pt filter=lfs diff=lfs merge=lfs -text
+
+# Large model checkpoints from training
+results/*/training_*/best_models/*.pt filter=lfs diff=lfs merge=lfs -text

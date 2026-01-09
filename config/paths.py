@@ -47,7 +47,7 @@ def get_paths(material_type="nonlinear"):
     MODELS_DIR = RESULTS_DIR / "models"  # trained models
     BEST_MODELS_DIR = MODELS_DIR / "best"  # best model checkpoints
     TEST_RESULTS_DIR = RESULTS_DIR / "test_results"  # test analysis results
-    ANIMATIONS_DIR = TEST_RESULTS_DIR  # legacy compatibility
+    ANIMATIONS_DIR = TEST_RESULTS_DIR
 
     # Temporary files
     TEMP_DIR = PROJECT_ROOT / "temp" / f"abaqus_scratch_{material_type}"
@@ -84,7 +84,7 @@ def get_paths(material_type="nonlinear"):
     )
 
 
-# Legacy compatibility: default nonlinear paths
+# Default nonlinear paths
 _default_paths = get_paths("nonlinear")
 DATA_DIR = _default_paths.DATA_DIR
 DATA_RAW = _default_paths.DATA_RAW

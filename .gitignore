@@ -1,4 +1,6 @@
+# =============================================================================
 # Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,138 +25,105 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# =============================================================================
 # Virtual Environment
+# =============================================================================
 venv/
 ENV/
 env/
 .venv
 
+# =============================================================================
 # IDEs
+# =============================================================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# =============================================================================
+# Operating Systems
+# =============================================================================
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Jupyter Notebooks
+# =============================================================================
+.ipynb_checkpoints/
 *.ipynb_checkpoints/
 
-# PyTorch
-*.pt
-*.pth
-*.ckpt
+# =============================================================================
+# Abaqus Simulation Files
+# =============================================================================
+# IMPORTANT: .odb files are 4MB each × 1000 files = ~4GB total
+# Consider using Git LFS or external storage (OneDrive, Zenodo, etc.)
+*.odb
 
-# Data and Results (large files)
-# Organized data directories
-data/raw/geometry/*.inp
-data/raw/simulations/**/*.odb
-data/raw/simulations/**/*.dat
-data/raw/simulations/**/*.msg
-data/raw/simulations/**/*.sta
-data/raw/simulations/**/*.log
-data/raw/simulations/**/*.com
-data/raw/simulations/**/*.prt
-data/raw/simulations/**/*.sim
-data/interim/strains/*.txt
-data/processed/*.pt
-data/processed/*.pkl
-
-# Temporary files
-temp/
+# Abaqus temporary files
 *.rpy
 *.rpy.*
 *.rec
 *.stt
-*.res
 *.pac
 *.mdl
-*.abq
-*.lck
-abaqus.rpy*
-abaqus*.rec
-
-# Result images (optional - comment out if you want to track them)
-results/images/*.png
-results/models/*.pt
-results/plots/*.png
-
-# Legacy data files in root (keep these ignored)
-INPs/
-ODBs/
-ODBsONLY/
-strains/
-*.pt
-*.pkl
-datasets/processed_data.pt
-datasets/*.pt
-results/*/
-*.odb
-*.inp
-*.txt
-ODBs/
-ODBsONLY/
-INPs/
-strains/
-
-# Keep videos (remove these lines if videos should be excluded)
-# !**/*.mp4
-# !**/*.avi
-# !**/*.mov
-# Note: If video is >100MB, use Git LFS or store externally
-
-# Abaqus files
-*.log
-*.dat
-*.msg
-*.sta
-*.com
-*.prt
-*.sim
-*.stt
-*.mdl
-*.pac
-*.res
-*.sel
 *.023
 *.lck
 abaqus.rpy*
-*.rec
 
+# Track .log, .dat, .msg files - they contain useful simulation metadata
+# (These are small and important for debugging)
+
+# =============================================================================
+# Data Directories - Selective Ignoring
+# =============================================================================
+# Keep .inp files (geometry definitions) - TRACKED
+# Keep simulation files except .odb - TRACKED
+# Keep processed .pt files (use Git LFS for >100MB) - TRACKED
+
+# Ignore interim text files (regenerated from ODB)
+data/interim/strains/*.txt
+
+# Ignore large model checkpoints from training runs
+results/*/training_*/best_models/*.pt
+results/*/training_*/checkpoints/*.pt
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+temp/
+tmp/
+*.tmp
+
+# =============================================================================
+# Testing & Coverage
+# =============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =============================================================================
+# ML/AI Tools
+# =============================================================================
+# Weights & Biases
+wandb/
+
+# Optuna studies
+*.db
+optuna_studies/
+
+# =============================================================================
 # LaTeX
+# =============================================================================
 *.aux
 *.fdb_latexmk
 *.fls
 *.toc
 *.out
 *.synctex.gz
-*.log
 *.bbl
 *.blg
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Temporary files
-*.tmp
-temp/
-tmp/
-
-# Pytest
-.pytest_cache/
-.coverage
-htmlcov/
-
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Weights & Biases (if used)
-wandb/
-
-# Optuna studies
-*.db
-optuna_studies/

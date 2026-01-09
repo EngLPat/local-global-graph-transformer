@@ -1,0 +1,12 @@
+{
+  "num_layers": 7,
+  "attention_freq": 4,
+  "batch_size": 8,
+  "hidden_dim": 96,
+  "dropout_rate": 0.25187957081914614,
+  "opt": "adam",
+  "opt_decay_step": 62,
+  "opt_decay_rate": 0.7138843145045198,
+  "weight_decay": 2.182048867632066e-06,
+  "lr": 0.0057829769500290125
+}
