@@ -1,10 +1,9 @@
-﻿# FCLGA GraphTransformer
+﻿# local-global-graph-transformer
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <img src="./media/Background_readme.svg" alt="Banner" style="width:100%; max-width:3000px; margin: 20px 0 0px 0;"/>
-Graph Neural Network with Frequency Controlled Hybrid Local-Global Attention for predicting mechanical response in structures.
 
 **Paper:** "Graph Neural Networks with Hybrid Local-Global Attention for Effective Prediction of Mechanical Response in Structures"  
 **Authors:** Luca Patrignani, Silvestre T. Pinho | Imperial College London

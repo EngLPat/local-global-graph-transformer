@@ -520,34 +520,42 @@ def save_plots(
 
     PATH = os.path.join(postprocess_dir, "Losses_" + model_name + ".pdf")
 
-    f = plt.figure(figsize=(10, 6))
-    plt.title("Losses Plot")
-    plt.plot(train_losses, label="Training loss")
-    plt.plot(val_losses, label="Validation loss")
+    # Match regression plot styling
+    text_color = "black"
+    plt.rcParams.update(
+        {
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.serif": ["CMU Serif", "Computer Modern", "serif"],
+            "font.size": 11,
+            "text.color": text_color,
+            "axes.labelcolor": text_color,
+            "xtick.color": text_color,
+            "ytick.color": text_color,
+            "svg.fonttype": "none",
+        }
+    )
+    
+    fig = plt.figure(figsize=(5, 3), dpi=300)
+    ax = plt.subplot(111)
+    
+    ax.plot(train_losses, label="Training Loss", color="#1F77B4", linewidth=2)
+    ax.plot(val_losses, label="Validation Loss", color="#FF7F0E", linewidth=2)
 
-    if test_losses is not None and len(test_losses) > 0:
-        # If we only have final test loss, show it as a point
-        if len(test_losses) == 1:
-            plt.scatter(
-                len(train_losses) - 1,
-                test_losses[0],
-                color="green",
-                label="Final Test loss",
-                s=100,
-                zorder=5,
-            )
-        else:
-            plt.plot(test_losses, label="Test loss")
+    if test_losses is not None and len(test_losses) > 1:
+        ax.plot(test_losses, label="Test Loss", linewidth=2)
 
-    # Removed the velocity loss plotting code
-
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.grid(True, linestyle="--", alpha=0.7)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(PATH, bbox_inches="tight")
-    plt.show()
+    ax.set_xlabel("Epochs", fontsize=11, color=text_color)
+    ax.set_ylabel("Loss", fontsize=11, color=text_color)
+    ax.grid(True, color=text_color, alpha=0.3, linestyle="--")
+    ax.tick_params(colors=text_color, which="both")
+    
+    legend = ax.legend(loc="upper right", framealpha=1.0)
+    for text in legend.get_texts():
+        text.set_color(text_color)
+    
+    plt.savefig(PATH, format="pdf", bbox_inches="tight")
+    plt.close(fig)
     print(f"Plot saved at: {PATH}")
 
 
