@@ -1,0 +1,1 @@
+*** Error: Abaqus Error: The following file(s) could not be located: /home/lpatrign/HybridAttentionGNN/data/raw/nonlinear/geometry/Plate_nonlinear_55.inp
