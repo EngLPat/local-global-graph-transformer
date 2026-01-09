@@ -3,8 +3,8 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-Graph Neural Network with Hybrid Local-Global Attention for predicting mechanical response in structures.
+<img src="./media/Background_readme.svg" alt="Banner" style="width:100%; max-width:3000px; margin: 20px 0 0px 0;"/>
+Graph Neural Network with Frequency Controlled Hybrid Local-Global Attention for predicting mechanical response in structures.
 
 **Paper:** "Graph Neural Networks with Hybrid Local-Global Attention for Effective Prediction of Mechanical Response in Structures"  
 **Authors:** Luca Patrignani, Silvestre T. Pinho | Imperial College London
@@ -12,7 +12,7 @@ Graph Neural Network with Hybrid Local-Global Attention for predicting mechanica
 ## Repository Structure
 
 ```
-HybridAttentionGNN/
+local-global-graph-transformer/
 ├── config/
 │   ├── defaults.yaml          # Edit simulation/training parameters here
 │   ├── paths.py               # Automatic path management (linear/nonlinear)
@@ -54,8 +54,8 @@ HybridAttentionGNN/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/HybridAttentionGNN.git
-cd HybridAttentionGNN
+git clone https://github.com/yourusername/local-global-graph-transformer.git
+cd local-global-graph-transformer
 
 # 2. Create conda environment
 conda env create -f environment.yml

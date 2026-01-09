@@ -66,13 +66,13 @@ This directory contains Jupyter notebooks demonstrating the trained models and r
 
 **Option 2: Jupyter Lab**
 ```bash
-cd /path/to/HybridAttentionGNN
+cd /path/to/local-global-graph-transformer
 jupyter lab
 ```
 
 **Option 3: Classic Jupyter Notebook**
 ```bash
-cd /path/to/HybridAttentionGNN/notebooks
+cd /path/to/local-global-graph-transformer/notebooks
 jupyter notebook
 ```
 
