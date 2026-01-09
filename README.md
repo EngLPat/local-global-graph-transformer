@@ -34,6 +34,10 @@ HybridAttentionGNN/
 │   └── training_*_TIMESTAMP/
 │       ├── best_models/       # Saved checkpoints
 │       └── training_results/  # Loss curves, hyperparameters
+├── notebooks/                 # Jupyter notebooks reproducing key figures
+│   ├── 01_nonlinear_demo.ipynb
+│   ├── 02_linear_demo.ipynb
+│   └── README.md
 └── scripts/                   # Legacy entry points
 ```
 
@@ -108,20 +112,30 @@ python -m src.preprocessing.linear.fclga_prepare_training_data
 Train with Optuna hyperparameter optimization:
 
 ```bash
-# Nonlinear (default)
-python -m src.training.fclga_train_model
+# Nonlinear (progressive damage)
+python -m src.training.fclga_train_model --material_type nonlinear
 
 # Linear (elastic)
 python -m src.training.fclga_train_model --material_type linear
 
 # Custom hyperparameters
 python -m src.training.fclga_train_model \
+    --material_type nonlinear \
     --num_layers 6 \
     --hidden_dim 48 \
     --attention_freq 3 \
     --learning_rate 8.24e-4 \
     --epochs 3000
+
+# Custom data split (default is 70/15/15)
+python -m src.training.fclga_train_model \
+    --material_type nonlinear \
+    --train_ratio 0.8 \
+    --val_ratio 0.1 \
+    --test_ratio 0.1
 ```
+
+**Data Split:** By default uses **70/15/15** (train/val/test). Configure via `--train_ratio`, `--val_ratio`, `--test_ratio` or edit `config/defaults.yaml`.
 
 Results saved to `results/{material_type}/training_{material_type}_TIMESTAMP/`.
 
@@ -132,7 +146,8 @@ Evaluate trained models:
 ```bash
 # Test best model from training run
 python -m src.evaluation.fclga_test \
-    --model_path results/nonlinear/training_nonlinear_20260107_152157/best_models/model_nl5_bs4_*.pt
+    --model_path results/nonlinear/training_nonlinear_20260107_152157/best_models/model_nl5_bs4_*.pt \
+    --material_type nonlinear
 
 # Test with specific material type
 python -m src.evaluation.fclga_test \
@@ -144,6 +159,24 @@ Generates:
 - Per-sample error visualizations (PDF)
 - Overall performance metrics (RMSE, MAPE)
 - Saved in `results/{material_type}/training_*/test_sample_*_results.pdf`
+
+### Interactive Notebooks
+
+Reproduce paper figures and visualize results:
+
+```bash
+# Launch Jupyter
+jupyter lab notebooks/
+
+# Or open in VS Code with Jupyter extension
+code notebooks/01_nonlinear_demo.ipynb
+```
+
+**Available notebooks:**
+- **[`01_nonlinear_demo.ipynb`](notebooks/01_nonlinear_demo.ipynb)**: Nonlinear case.
+- **[`02_linear_demo.ipynb`](notebooks/02_linear_demo.ipynb)**: Linear elastic case.
+
+See [notebooks/README.md](notebooks/README.md) for detailed usage instructions.
 
 ## Key Files
 

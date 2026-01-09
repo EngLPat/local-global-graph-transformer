@@ -8,14 +8,17 @@ Main entry points and utilities for the FCLGA GraphTransformer project.
 Complete end-to-end pipeline orchestrator.
 
 ```bash
-# Run complete preprocessing
-python scripts/fclga_run_pipeline.py --stage preprocess
+# Run complete preprocessing (nonlinear)
+python scripts/fclga_run_pipeline.py --stage preprocess --material_type nonlinear
 
 # Run with specific CPU count
-python scripts/fclga_run_pipeline.py --stage preprocess --num_cpus 8
+python scripts/fclga_run_pipeline.py --stage preprocess --material_type nonlinear --num_cpus 8
 
 # Run everything (preprocess + train + test)
-python scripts/fclga_run_pipeline.py --stage all
+python scripts/fclga_run_pipeline.py --stage all --material_type nonlinear
+
+# Linear elastic material
+python scripts/fclga_run_pipeline.py --stage all --material_type linear
 ```
 
 **Features:**

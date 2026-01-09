@@ -118,13 +118,13 @@ def run_optuna_optimization(args):
         trial_args_obj = objectview(trial_args)
 
         try:
-            # LEGACY: Load and split dataset with 70/15/15 split
+            # Load and split dataset using configured ratios
             dataset = torch.load(file_path, weights_only=False)
 
-            # Calculate split sizes
+            # Calculate split sizes from ratios
             total_size = len(dataset)
-            train_size = int(total_size * 0.7)
-            val_size = int(total_size * 0.15)
+            train_size = int(total_size * trial_args.get("train_ratio", 0.7))
+            val_size = int(total_size * trial_args.get("val_ratio", 0.15))
 
             # Create the splits
             if trial_args["shuffle"]:
@@ -261,11 +261,11 @@ def run_optuna_optimization(args):
 
         best_args = objectview(best_params)
 
-        # Load dataset and create splits (same as optimization)
+        # Load dataset and create splits using configured ratios
         dataset = torch.load(file_path, weights_only=False)
         total_size = len(dataset)
-        train_size = int(total_size * 0.7)
-        val_size = int(total_size * 0.15)
+        train_size = int(total_size * best_args.train_ratio)
+        val_size = int(total_size * best_args.val_ratio)
         test_size = total_size - train_size - val_size
 
         torch.manual_seed(42)
@@ -725,10 +725,13 @@ For different geometries, consider adjusting hyperparameters.
 
     # Dataset Parameters
     parser.add_argument(
-        "--train_size", type=int, default=400, help="Number of training samples (default: 400)"
+        "--train_ratio", type=float, default=0.7, help="Training set ratio (default: 0.7 = 70%%)"
     )
     parser.add_argument(
-        "--test_size", type=int, default=100, help="Number of test samples (default: 100)"
+        "--val_ratio", type=float, default=0.15, help="Validation set ratio (default: 0.15 = 15%%)"
+    )
+    parser.add_argument(
+        "--test_ratio", type=float, default=0.15, help="Test set ratio (default: 0.15 = 15%%)"
     )
     parser.add_argument(
         "--shuffle", action="store_true", default=True, help="Shuffle dataset (default: True)"
@@ -895,13 +898,14 @@ For different geometries, consider adjusting hyperparameters.
 
     analyze_node_features(dataset)
 
-    # Calculate split sizes
+    # Calculate split sizes from configured ratios
     total_size = len(dataset)
-    train_size = int(total_size * 0.7)  # 70% training
-    val_size = int(total_size * 0.15)  # 15% validation
-    test_size = total_size - train_size - val_size  # 15% testing
+    train_size = int(total_size * args.train_ratio)
+    val_size = int(total_size * args.val_ratio)
+    test_size = total_size - train_size - val_size
 
     print(f"Dataset size: {total_size}")
+    print(f"Split ratios: {args.train_ratio:.0%} / {args.val_ratio:.0%} / {args.test_ratio:.0%}")
     print(f"Training set size: {train_size}")
     print(f"Validation set size: {val_size}")
     print(f"Test set size: {test_size}")

@@ -3,10 +3,14 @@
 # =============================================================================
 # Edit this file to change default hyperparameters for training and testing.
 # All values can be overridden via command-line arguments.
+# Note on preprocessing: Geometry generation (fclga_generate_geometry.py) runs 
+# inside Abaqus's Python interpreter, which cannot load YAML. For this script,
+# edit parameters directly in the file. All other preprocessing scripts load 
+# from YAML normally.
 #
 # Usage:
-#   Training:  python -m src.training.fclga_train_model
-#   Testing:   python -m src.evaluation.fclga_test --model_path <path>
+#   Training:  python -m src.training.fclga_train_model  --material_type <material>
+#   Testing:   python -m src.evaluation.fclga_test --model_path <path> --material_type <material>
 #
 # To use custom config: --config path/to/custom_config.yaml
 # =============================================================================
@@ -25,9 +29,9 @@ training:
   batch_size: 4              # Batch size for training
   learning_rate: 8.24e-4     # Initial learning rate
   weight_decay: 1.07e-5      # L2 regularization
-  train_size: 400            # Number of training samples
-  val_size: 0                # Validation size (0 = use test for validation)
-  test_size: 100             # Number of test samples
+  train_ratio: 0.7           # Training set ratio (70%)
+  val_ratio: 0.15            # Validation set ratio (15%)
+  test_ratio: 0.15           # Test set ratio (15%)
   shuffle: true              # Shuffle dataset before splitting
   save_best_model: true      # Save model with best validation loss
   
@@ -39,7 +43,6 @@ optimizer:
   decay_rate: 0.668          # LR decay factor
   restart: 0                 # Scheduler restarts
 
-# Preprocessing Settings
 # Preprocessing Settings
 # 
 # NOTE: Geometry generation (fclga_generate_geometry.py) runs in Abaqus's

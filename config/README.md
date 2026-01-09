@@ -36,7 +36,8 @@ preprocessing:
 
 Then run with defaults:
 ```bash
-conda run -n fclga python -m src.training.fclga_train_model
+conda run -n fclga python -m src.training.fclga_train_model --material_type nonlinear
+
 ```
 
 ### 2. Override via CLI (Experiments)
@@ -45,11 +46,11 @@ Keep defaults unchanged, override for specific runs:
 
 ```bash
 # Quick test with 2 epochs
-conda run -n fclga python -m src.training.fclga_train_model --epochs 2
+conda run -n fclga python -m src.training.fclga_train_model --material_type nonlinear --epochs 2
 
 # Ablation study: test different architectures
-conda run -n fclga python -m src.training.fclga_train_model --num_layers 4 --hidden_dim 32
-conda run -n fclga python -m src.training.fclga_train_model --num_layers 8 --hidden_dim 128
+conda run -n fclga python -m src.training.fclga_train_model --material_type nonlinear --num_layers 4 --hidden_dim 32
+conda run -n fclga python -m src.training.fclga_train_model --material_type nonlinear --num_layers 8 --hidden_dim 128
 ```
 
 ### 3. Custom Config File (Optional)
@@ -62,7 +63,7 @@ cp config/defaults.yaml config/experiment_deep.yaml
 # Edit experiment_deep.yaml...
 
 # Use custom config
-conda run -n fclga python -m src.training.fclga_train_model --config config/experiment_deep.yaml
+conda run -n fclga python -m src.training.fclga_train_model --material_type nonlinear --config config/experiment_deep.yaml
 ```
 
 ## Configuration Files
@@ -78,9 +79,6 @@ Directory structure and file paths. Used by all modules to locate data/results.
 ### `constants.py`
 Physical constants, visualization settings, numerical tolerances. True constants that shouldn't vary per experiment.
 
-### ~~`hyperparameters.py`~~ (REMOVED)
-Deprecated Python-based config. Redundant with YAML approach.
-
 ## Best Practices
 
 **For development**: Edit `defaults.yaml` directly  
@@ -95,19 +93,13 @@ Deprecated Python-based config. Redundant with YAML approach.
 vim config/defaults.yaml
 
 # 2. Quick sanity check
-conda run -n fclga python -m src.training.fclga_train_model --epochs 2
+conda run -n fclga python -m src.training.fclga_train_model  --material_type nonlinear --epochs 2
 
 # 3. Full training (uses YAML defaults)
-conda run -n fclga python -m src.training.fclga_train_model
+conda run -n fclga python -m src.training.fclga_train_model  --material_type nonlinear
 
 # 4. Test trained model (extract params from filename)
-conda run -n fclga python -m src.evaluation.fclga_test \
+conda run -n fclga python -m src.evaluation.fclga_test --material_type nonlinear\
     --model_path results/0_standard_*/best_models/model_nl6_*.pt \
     --num_layers 6 --hidden_dim 48
 ```
-
-## Migration Note
-
-Previous versions had duplicate configuration in `hyperparameters.py` (Python classes) and `defaults.yaml`. This caused maintenance issues. 
-
-**Current approach**: Single YAML source + CLI overrides = best of both worlds.
