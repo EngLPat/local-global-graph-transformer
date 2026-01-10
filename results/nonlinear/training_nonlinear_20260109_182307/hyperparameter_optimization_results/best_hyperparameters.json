@@ -1,0 +1,12 @@
+{
+  "num_layers": 5,
+  "attention_freq": 3,
+  "batch_size": 4,
+  "hidden_dim": 128,
+  "dropout_rate": 0.21496792657170033,
+  "opt": "rmsprop",
+  "opt_decay_step": 40,
+  "opt_decay_rate": 0.7447788576539163,
+  "weight_decay": 3.0045972921492656e-07,
+  "lr": 0.00036268409381325187
+}

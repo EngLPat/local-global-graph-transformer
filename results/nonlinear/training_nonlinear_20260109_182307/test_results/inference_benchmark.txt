@@ -1,0 +1,9 @@
+============================================================
+INFERENCE TIME BENCHMARK
+============================================================
+
+GNN Inference Results:
+  Average inference time: 4.871 ms (0.004871 s)
+  Number of runs: 100
+  Total time: 0.487 seconds
+  Inference frequency: 205.3 predictions/second
