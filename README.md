@@ -18,8 +18,8 @@ local-global-graph-transformer/
 │   └── constants.py           # Physical constants
 ├── src/
 │   ├── preprocessing/
-│   │   ├── linear/            # Elastic fabric composite (Static/Implicit)
-│   │   └── nonlinear/         # Plastic laminate (Dynamic/Explicit)
+│   │   ├── linear/            # Linear Elastic Laminate (Static/Implicit)
+│   │   └── nonlinear/         # Nonlinear Woven-Fabric Composite (Dynamic/Explicit)
 │   ├── models/                # FCLGA GraphTransformer architecture
 │   ├── training/              # Training with Optuna hyperparameter tuning
 │   ├── evaluation/            # Testing and visualization
@@ -68,8 +68,8 @@ python -c "import torch; import torch_geometric; print('✓ Ready')"
 
 ### Material Types
 
-- **`linear`**: Elastic fabric composite, Static/Implicit solver, 1-2mm displacement
-- **`nonlinear`**: Plastic laminate, Dynamic/Explicit solver, 1-3mm displacement
+- **`linear`**: Linear Elastic Laminate, Static/Implicit solver, 1-2mm displacement
+- **`nonlinear`**: Nonlinear Woven-Fabric Composite, Dynamic/Explicit solver, 1-3mm displacement
 
 All commands support `--material_type {linear,nonlinear}` (default: nonlinear).
 
