@@ -14,4 +14,4 @@ If you use this code, please cite our work:
 
 ## License
 
-MIT License - See LICENSE file
+BSD-3-Clause License - See LICENSE file

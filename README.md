@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 <img src="./media/Background_readme.svg" alt="Banner" style="width:100%; max-width:3000px; margin: 20px 0 0px 0;"/>
 
 **Paper:** "Graph Neural Networks with Hybrid Local-Global Attention for Effective Prediction of Mechanical Response in Structures"  
@@ -203,4 +203,4 @@ See [notebooks/README.md](notebooks/README.md) for detailed usage instructions.
 
 ## License
 
-MIT License - See LICENSE file
+BSD-3-Clause License - See LICENSE file
