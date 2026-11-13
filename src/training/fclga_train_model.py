@@ -834,8 +834,7 @@ For different geometries, consider adjusting hyperparameters.
     print(f"  - Optimizer: {args.opt}")
     print(f"  - Device: {args.device}")
     print("\nDataset Configuration:")
-    print(f"  - Training samples: {args.train_size}")
-    print(f"  - Test samples: {args.test_size}")
+    print(f"  - Split ratios: {args.train_ratio:.0%} / {args.val_ratio:.0%} / {args.test_ratio:.0%}")
     print(f"  - Shuffle: {args.shuffle}")
     print("=" * 80)
     print()
@@ -859,7 +858,7 @@ For different geometries, consider adjusting hyperparameters.
     random.seed(5)  # Python
     np.random.seed(5)  # NumPy
 
-    dataset = torch.load(file_path, weights_only=False)[: (args.train_size + args.test_size)]
+    dataset = torch.load(file_path, weights_only=False)
 
     sample_data = dataset[0]  # Get first graph in dataset
 
