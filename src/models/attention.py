@@ -51,7 +51,11 @@ class GlobalAttention(torch.nn.Module):
         key = self.key(x)
         value = self.value(x)
 
-        # Global attention mechanism
-        attention_logits = torch.matmul(query, key.transpose(-2, -1)) * self.scale
-        attention_weights = torch.softmax(attention_logits, dim=-1)
-        return torch.matmul(attention_weights, value)
+        # Global attention mechanism, within each graph of the batch
+        out = torch.zeros_like(value)
+        for graph in torch.unique(batch):
+            mask = batch == graph
+            attention_logits = torch.matmul(query[mask], key[mask].transpose(-2, -1)) * self.scale
+            attention_weights = torch.softmax(attention_logits, dim=-1)
+            out[mask] = torch.matmul(attention_weights, value[mask])
+        return out
